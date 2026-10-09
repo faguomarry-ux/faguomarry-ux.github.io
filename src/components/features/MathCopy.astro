@@ -1,0 +1,75 @@
+<script>
+	function prepareMath() {
+		for (const math of document.querySelectorAll<HTMLElement>(".custom-md .katex:not([data-copy-latex])")) {
+			const source = math.querySelector('annotation[encoding="application/x-tex"]')?.textContent;
+			if (!source) continue;
+			math.dataset.copyLatex = source;
+			math.tabIndex = 0;
+			math.setAttribute("role", "button");
+			math.setAttribute("aria-label", "复制 LaTeX 源码");
+			math.title = "点击复制 LaTeX 源码（不含 $ 分隔符）";
+		}
+	}
+
+	async function copyMath(math: HTMLElement) {
+		const source = math.dataset.copyLatex;
+		if (!source) return;
+		let status = document.getElementById("math-copy-status");
+		if (!status) {
+			status = document.createElement("div");
+			status.id = "math-copy-status";
+			status.setAttribute("role", "status");
+			document.body.append(status);
+		}
+		try {
+			await navigator.clipboard.writeText(source);
+			status.textContent = "LaTeX 源码已复制";
+			setTimeout(() => { if (status) status.textContent = ""; }, 2200);
+		} catch {
+			// Clipboard access can be denied by the browser; keep the source selectable.
+			const dialog = document.createElement("dialog");
+			dialog.className = "math-copy-dialog";
+			const label = document.createElement("p");
+			label.textContent = "浏览器未允许复制，请手动复制下面的 LaTeX 源码：";
+			const text = document.createElement("textarea");
+			text.value = source;
+			text.readOnly = true;
+			text.setAttribute("aria-label", "LaTeX 源码");
+			const close = document.createElement("button");
+			close.textContent = "关闭";
+			close.addEventListener("click", () => dialog.close());
+			dialog.addEventListener("close", () => dialog.remove());
+			dialog.append(label, text, close);
+			document.body.append(dialog);
+			dialog.showModal();
+			text.select();
+		}
+	}
+
+	document.addEventListener("click", (event) => {
+		if (!(event.target instanceof Element) || window.getSelection()?.toString()) return;
+		const math = event.target.closest<HTMLElement>("[data-copy-latex]");
+		if (math) void copyMath(math);
+	});
+	document.addEventListener("keydown", (event) => {
+		if (!(event.target instanceof HTMLElement) || !event.target.matches("[data-copy-latex]")) return;
+		if (event.key === "Enter" || event.key === " ") {
+			event.preventDefault();
+			void copyMath(event.target);
+		}
+	});
+	prepareMath();
+	// Also handles Swup navigation and articles unlocked after entering a password.
+	new MutationObserver(prepareMath).observe(document.body, { childList: true, subtree: true });
+</script>
+
+<style is:global>
+	.custom-md [data-copy-latex] { cursor: copy; border-radius: 4px; }
+	.custom-md [data-copy-latex]:hover,
+	.custom-md [data-copy-latex]:focus-visible { outline: 2px solid var(--primary); outline-offset: 4px; }
+	#math-copy-status:not(:empty) { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); z-index: 10000; padding: .75rem 1.25rem; border-radius: .75rem; background: var(--card-bg); color: var(--primary); box-shadow: 0 4px 24px #0003; }
+	.math-copy-dialog { margin: auto; width: min(90vw, 36rem); padding: 1.5rem; border-radius: 1rem; background: var(--card-bg); color: var(--text-color); }
+	.math-copy-dialog::backdrop { background: #0006; }
+	.math-copy-dialog textarea { display: block; width: 100%; min-height: 8rem; margin: 1rem 0; padding: .75rem; font-family: monospace; border: 1px solid var(--primary); }
+	.math-copy-dialog button { color: var(--primary); padding: .5rem 1rem; }
+</style>

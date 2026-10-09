@@ -17,7 +17,7 @@ const args = process.argv.slice(2);
 
 if (args.length === 0) {
 	console.error(`Error: No filename argument provided
-Usage: npm run new-post -- <filename>`);
+Usage: pnpm new-post <filename> [category] [title]`);
 	process.exit(1); // Terminate the script and return error code 1
 }
 
@@ -31,6 +31,10 @@ if (!fileExtensionRegex.test(fileName)) {
 
 const targetDir = "./src/content/posts/";
 const fullPath = path.join(targetDir, fileName);
+const postsRoot = path.resolve(targetDir);
+if (!path.resolve(fullPath).startsWith(`${postsRoot}${path.sep}`)) {
+	throw new Error("文章路径必须位于 src/content/posts 内");
+}
 
 // Generate slug from filename: strip extension, strip trailing /index
 let slug = fileName.replace(fileExtensionRegex, "");
@@ -80,13 +84,13 @@ if (!fs.existsSync(dirPath)) {
 }
 
 const content = `---
-title: ${args[0]}
+title: ${JSON.stringify(args[2] || args[0])}
 published: ${getDate()}
 description: ''
 image: ''
 tags: []
-category: ''
-draft: false
+category: ${JSON.stringify(args[1] || "闲谈记录")}
+draft: true
 lang: ''
 slug: ${slug}
 ---

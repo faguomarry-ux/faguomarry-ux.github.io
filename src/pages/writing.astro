@@ -1,0 +1,14 @@
+---
+import { getEntry, render } from "astro:content";
+import Markdown from "@/components/common/Markdown.astro";
+import MainGridLayout from "@/layouts/MainGridLayout.astro";
+
+const guide = await getEntry("spec", "writing");
+if (!guide) throw new Error("Writing guide not found");
+const { Content } = await render(guide);
+---
+<MainGridLayout title="Markdown 写作与发布" description="用 Markdown 文件快捷创建、预览和发布学习笔记。">
+  <article class="card-base px-6 py-8 md:px-9">
+    <Markdown class="mt-2"><Content /></Markdown>
+  </article>
+</MainGridLayout>

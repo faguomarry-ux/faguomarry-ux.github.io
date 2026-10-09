@@ -17,6 +17,8 @@ pnpm dev
 
 ## 写一篇文章
 
+网站的 `/writing/` 提供完整的 Markdown 写作与发布指南，以及可下载模板。快捷创建：`pnpm new-post pde/my-note "偏微分方程" "文章标题"`，默认草稿；写完改为 `draft: false`，运行 `pnpm publish-post pde/my-note.md` 可完成检查、单篇提交和推送。公式可以直接点击复制不含 `$` 的 LaTeX 源码。
+
 运行 `pnpm new-post my-note`，或把 `templates/math-note.md` / `templates/language-note.md` 复制到 `src/content/posts/` 下。子文件夹用于整理源文件，文章归属由 `category` 决定。
 
 ```yaml

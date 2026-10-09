@@ -33,6 +33,7 @@ export const navBarConfig: NavBarConfig = {
 		})),
 		{ name: "闲谈", url: topicUrl("闲谈记录"), icon: "material-symbols:chat" },
 		LinkPresets.Archive,
+		{ name: "写作指南", url: "/writing/", icon: "material-symbols:edit-note" },
 		LinkPresets.About,
 	],
 };
