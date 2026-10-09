@@ -32,8 +32,12 @@ export const navBarConfig: NavBarConfig = {
 				.map((t) => ({ name: t.name, url: topicUrl(t.name) })),
 		})),
 		{ name: "闲谈", url: topicUrl("闲谈记录"), icon: "material-symbols:chat" },
-		LinkPresets.Archive,
-		{ name: "写作指南", url: "/writing/", icon: "material-symbols:edit-note" },
-		LinkPresets.About,
+		{ name: "写作", url: "/writing/", icon: "material-symbols:edit-note" },
+		{
+			name: "更多",
+			url: "/archive/",
+			icon: "material-symbols:more-horiz",
+			children: [LinkPresets.Archive, LinkPresets.About],
+		},
 	],
 };
