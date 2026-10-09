@@ -18,5 +18,7 @@ updates:
     pull-request-branch-name:
       separator: "-"
     ignore:
+      # 0.8.0 is browser-only; rehype-mermaid requires the alpha's build-time SDK.
+      - dependency-name: "@mermanjs/web"
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
