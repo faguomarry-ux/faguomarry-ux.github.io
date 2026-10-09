@@ -1,6 +1,9 @@
 ---
 import { studyTopics, topicUrl } from "@/config/studyConfig";
-interface Props { compact?: boolean; }
+
+interface Props {
+	compact?: boolean;
+}
 const { compact = false } = Astro.props;
 ---
 <section class:list={["study-map card-base onload-animation", { compact }]} aria-labelledby="study-map-heading">

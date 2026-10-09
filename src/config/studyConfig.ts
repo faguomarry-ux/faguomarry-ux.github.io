@@ -61,4 +61,4 @@ export const studyTopics = [
 	},
 ] as const;
 export const topicUrl = (name: string): string =>
-	"/archive/?category=" + encodeURIComponent(name);
+	`/archive/?category=${encodeURIComponent(name)}`;

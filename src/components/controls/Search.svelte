@@ -5,8 +5,8 @@ import { navigateToPage } from "@utils/navigation-utils";
 import { onMount } from "svelte";
 import Icon from "@/components/common/Icon.svelte";
 import type { SearchResult } from "@/global";
-import { FLOATING_PANEL_CLOSE_EVENT } from "@/utils/floating-panel-utils";
 import { searchChineseText } from "@/utils/chinese-search";
+import { FLOATING_PANEL_CLOSE_EVENT } from "@/utils/floating-panel-utils";
 import { url as formatUrl, getSearchUrl } from "@/utils/url-utils";
 
 // --- State ---
@@ -120,8 +120,10 @@ const search = async (keyword: string, isDesktop: boolean): Promise<void> => {
 			}
 			if (import.meta.env.PROD && /\p{Script=Han}/u.test(keyword)) {
 				const textResults = await searchChineseText(keyword);
-				const seen = new Set(searchResults.map(item => item.url));
-				searchResults.push(...textResults.filter(item => !seen.has(item.url)));
+				const seen = new Set(searchResults.map((item) => item.url));
+				searchResults.push(
+					...textResults.filter((item) => !seen.has(item.url)),
+				);
 			}
 
 			if (requestId !== searchRequestId) return;
