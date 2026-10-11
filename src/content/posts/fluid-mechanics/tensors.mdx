@@ -1,0 +1,10231 @@
+---
+title: "流体力学中的张量：从矩阵、应力到速度梯度与本构关系"
+published: 2026-10-11
+description: "保留七个原始学习问题及完整回答，详细推导张量的矩阵表示、柯西应力、速度梯度与高阶张量计算，配合本地 SVG 和交互动画逐步学习。"
+category: "流体力学"
+tags: ["张量", "线性代数", "柯西应力", "速度梯度", "应变率", "学习笔记"]
+series: "流体力学中的张量"
+seriesOrder: 1
+lang: "zh-CN"
+---
+
+import TensorExplorer from "@/components/diagrams/TensorExplorer.svelte";
+
+import TensorCalculations from "@/components/diagrams/TensorCalculations.svelte";
+
+这篇长篇学习笔记按照实际提问顺序保留七个问题，每个问题下面紧接详细回答。前两个问题建立张量与矩阵的联系，第三至第五个问题推导流体应力与运动学，第六、七个问题集中展示高阶张量的分量、运算与本构计算。
+
+> 阅读约定：除讨论一般基底与曲线坐标的段落外，使用固定笛卡尔正交归一基底；$L_{ij}=\partial_j u_i$，$t_i=\sigma_{ij}n_j$，$(\nabla\cdot\sigma)_i=\partial_j\sigma_{ij}$。工程记法中的重复下指标求和隐含欧氏度量。原始问题保留原话，答案保留推导层次和算例，清理导出乱码并修订符号。原文的“合矢”按上下文解释为“并矢”，即向量张量积。
+
+正文中的图片均为站内 SVG，交互演示由随文章发布的浏览器脚本运行。没有原会话的临时链接或本机文件路径依赖。
+
+## 问题 1：张量的定义
+
+> **我的问题（原文）**
+>
+> 张量定义
+
+**回答**
+
+### 一、张量（Tensor）的数学定义
+
+张量是定义在向量空间及其对偶空间上的多重线性映射。
+
+这是线性代数与微分几何中对张量最严格、最常用的定义之一。
+
+不过，要真正理解张量，需要从标量 → 向量 → 线性映射 → 双线性映射 → 张量逐步建立概念。
+
+#### 1. 从标量、向量和矩阵理解张量
+
+![标量、向量与高阶张量的分量排列](/images/fluid-mechanics/tensors/tensor-orders.svg)
+
+| 数学对象 | 示例 | 分量指标数 |
+| --- | --- | --- |
+| 标量 | $a=3$ | 0 |
+| 向量 | $v^i$ | 1 |
+| 二阶张量 | $T^{ij}$ | 2 |
+| 三阶张量 | $T^{ijk}$ | 3 |
+| $k$ 阶张量 | $T^{i_1\cdots i_k}$ | $k$ |
+
+需要注意：张量并不等同于多维数组。
+
+多维数组只是张量在选定基底下的一种分量表示。真正区分一般数组和张量的关键，是这些分量在基底变化时是否满足特定的变换规律。
+
+#### 2. 张量的严格数学定义
+
+设 $V$ 是域 $\mathbb R$ 上的有限维向量空间。
+
+首先定义它的对偶空间：
+
+$$
+V^*=\{\varphi:V\to\mathbb R\mid \varphi\text{ 是线性映射}\}
+$$
+
+一个 $(r,s)$ 型张量定义为多重线性映射：
+
+$$
+\boxed{
+T:\underbrace{V^*\times\cdots\times V^*}_{r\text{ 个}}
+\times
+\underbrace{V\times\cdots\times V}_{s\text{ 个}}
+\longrightarrow\mathbb R
+}
+$$
+
+其中：
+
+- $r$：逆变指标（上指标）的数量。
+- $s$：协变指标（下指标）的数量。
+- $r+s$：张量的总阶数。
+
+其分量通常表示为：
+
+$$
+T^{i_1\cdots i_r}_{j_1\cdots j_s}
+$$
+
+等价地，所有 $(r,s)$ 型张量构成张量积空间：
+
+$$
+\boxed{
+\mathcal T^r_s(V)
+=
+V^{\otimes r}\otimes(V^*)^{\otimes s}
+}
+$$
+
+#### 3. 什么是多重线性？
+
+这是张量定义最核心的地方。
+
+先考虑二阶协变张量：
+
+$$
+T:V\times V\to\mathbb R
+$$
+
+它接受两个向量，并返回一个实数。
+
+要求它对每一个输入分别满足线性性质。例如：
+
+$$
+T(au+bv,w)
+=
+aT(u,w)+bT(v,w)
+$$
+
+以及
+
+$$
+T(u,av+bw)
+=
+aT(u,v)+bT(u,w)
+$$
+
+这称为双线性映射。
+
+例如，在 $\mathbb R^2$ 中定义：
+
+$$
+T(u,v)=u_1v_1+2u_2v_2
+$$
+
+写成矩阵形式：
+
+$$
+T(u,v)=
+\begin{pmatrix}u_1&u_2\end{pmatrix}
+\begin{pmatrix}1&0\\0&2\end{pmatrix}
+\begin{pmatrix}v_1\\v_2\end{pmatrix}
+$$
+
+即：
+
+$$
+\boxed{T(u,v)=u^{\mathsf T}Av}
+$$
+
+由于这个映射对 $u$ 和 $v$ 分别都是线性的，因此它定义了一个二阶协变张量。
+
+这里的矩阵 $A$ 是该张量在标准基底下的分量表示。
+
+#### 4. 张量为什么要满足坐标变换规律？
+
+假设在两个坐标系中，坐标由 $x^i$ 变为 $x'^i$。
+
+一个 $(1,1)$ 型张量的分量必须满足：
+
+$$
+\boxed{
+T'^i_{\ j}
+=
+\frac{\partial x'^i}{\partial x^k}
+\frac{\partial x^\ell}{\partial x'^j}
+T^k_{\ \ell}
+}
+$$
+
+这里采用爱因斯坦求和约定，即重复出现的指标需要求和。
+
+这个公式意味着：虽然我们选用不同的坐标系来描述同一个张量，但张量本身所代表的数学对象并没有改变。
+
+不同类型的张量具有不同的变换规律：
+
+| 张量类型 | 分量变换规律 |
+| --- | --- |
+| 标量 $(0,0)$ | $a'=a$ |
+| 逆变向量 $(1,0)$ | $v'^i=\frac{\partial x'^i}{\partial x^j}v^j$ |
+| 协变向量 $(0,1)$ | $\omega'_i=\frac{\partial x^j}{\partial x'^i}\omega_j$ |
+| 二阶协变张量 $(0,2)$ | $T'_{ij}=\frac{\partial x^k}{\partial x'^i}\frac{\partial x^\ell}{\partial x'^j}T_{k\ell}$ |
+
+因此，满足相应的张量变换规律，是判断一组坐标分量能否表示张量的重要条件。
+
+#### 5. 张量在 PDE 和流体力学中的应用
+
+在偏微分方程与流体力学中，你会经常遇到以下张量。
+
+（1）梯度
+
+对于标量函数 $u:\mathbb R^n\to\mathbb R$，它的微分是一个协向量：
+
+$$
+du=\frac{\partial u}{\partial x^i}dx^i
+$$
+
+在欧氏空间中，可以通过内积将 $du$ 与梯度向量 $\nabla u$ 对应起来。
+
+（2）Hessian 矩阵
+
+对于二阶可微函数：
+
+$$
+D^2u=
+\begin{pmatrix}
+\frac{\partial^2u}{\partial x_1^2}&\cdots&\frac{\partial^2u}{\partial x_1\partial x_n}\\
+\vdots&\ddots&\vdots\\
+\frac{\partial^2u}{\partial x_n\partial x_1}&\cdots&\frac{\partial^2u}{\partial x_n^2}
+\end{pmatrix}
+$$
+
+在欧氏空间的笛卡尔坐标变换下，它具有二阶协变张量的变换性质。在一般非线性坐标变换下，普通二阶偏导数不自动满足张量变换律，需要使用协变 Hessian。
+
+（3）流体中的应力张量
+
+牛顿流体的柯西应力张量在笛卡尔坐标下可以写成：
+
+$$
+\boxed{
+\sigma_{ij}
+=
+-p\delta_{ij}
++
+\mu\left(
+\frac{\partial v_i}{\partial x_j}
++
+\frac{\partial v_j}{\partial x_i}
+\right)
++
+\lambda(\nabla\cdot v)\delta_{ij}
+}
+$$
+
+其中 $p$ 为压力，$\mu,\lambda$ 为黏性系数，$v$ 为速度场。
+
+它用于描述流体内部不同方向上的力，是 Navier–Stokes 方程的重要组成部分。
+
+#### 6. 最后总结
+
+从三个层次理解张量：
+
+- 直观层次：张量可以用多维数组表示，标量和向量都是特殊张量。
+- 数学定义层次：张量是向量空间和对偶空间上的多重线性映射，等价地属于相应的张量积空间。
+- 几何层次：张量是不依赖于具体坐标系的数学对象，其分量必须遵循规定的坐标变换规律。
+
+如果你正在学习 PDE，我建议下一步重点理解 为什么向量有上指标 $v^i$，而梯度的分量有下指标 $\partial_i u$。这正是从普通线性代数进入张量分析、黎曼几何和连续介质力学的关键。
+
+## 问题 2：流体力学中的张量与矩阵
+
+> **我的问题（原文）**
+>
+> 在流体力学中给我详细的解释介绍张量，我需要的是知道张量和矩阵的联系
+
+**回答**
+
+### 流体力学中的张量：从矩阵出发，理解它的数学本质与物理意义
+
+在流体力学中，张量（Tensor）是一个非常重要的数学工具。Navier–Stokes 方程中的应力张量、速度梯度张量、应变率张量、涡量张量以及雷诺应力张量，都与它有关。
+
+理解张量时，最容易产生的疑问是：
+
+> 一个二阶张量看起来就是一个矩阵，为什么还需要引入“张量”这个概念？矩阵和张量究竟有什么区别？
+
+我先给出核心结论：
+
+矩阵是数字的排列方式，张量是具有特定几何意义和坐标变换规律的数学对象。二阶张量通常可以用矩阵表示，但张量本身不是矩阵。
+
+我们从最基本的矩阵开始，再逐步进入流体力学。
+
+#### 一、从向量、矩阵到张量
+
+##### 1. 先理解向量
+
+考虑二维流场中的某一点，其速度为
+
+$$
+\mathbf u=
+\begin{pmatrix}
+u_x\\
+u_y
+\end{pmatrix}
+=
+\begin{pmatrix}
+3\\
+4
+\end{pmatrix}
+$$
+
+它表示流体在该点的速度沿 $x$ 方向为 3，沿 $y$ 方向为 4。
+
+- 物理速度向量 $\mathbf u$：描述流体真实的运动。
+- 坐标分量 $(3,4)$：描述该向量在当前坐标系中的投影。
+
+如果旋转坐标系，分量会改变，但流体的实际速度不会改变。
+
+这就是理解张量的第一个关键：物理对象不依赖坐标系，但它的数字表示依赖坐标系。
+
+![速度向量及其坐标分量](/images/fluid-mechanics/tensors/vector-components.svg)
+
+##### 2. 矩阵是什么？
+
+矩阵是按行、列排列的数表。例如：
+
+$$
+A=
+\begin{pmatrix}
+2&1\\
+0&3
+\end{pmatrix}
+$$
+
+矩阵可以表示线性映射：
+
+$$
+\mathbf y=A\mathbf x
+$$
+
+例如：
+
+$$
+\begin{pmatrix}y_1\\y_2\end{pmatrix}
+=
+\begin{pmatrix}2&1\\0&3\end{pmatrix}
+\begin{pmatrix}x_1\\x_2\end{pmatrix}
+$$
+
+展开：
+
+$$
+\begin{cases}
+y_1=2x_1+x_2\\
+y_2=3x_2
+\end{cases}
+$$
+
+我们也可以写成指标形式：
+
+$$
+\boxed{y_i=\sum_{j=1}^{2}A_{ij}x_j}
+$$
+
+这是流体力学中经常出现的记法。
+
+矩阵的每一行告诉你如何计算输出的某个分量，每一列对应输入向量的某个分量所产生的贡献。
+
+##### 3. 二阶张量为什么可以表示为矩阵？
+
+考虑一个线性映射：
+
+$$
+T:V\longrightarrow V
+$$
+
+选定一组基向量：
+
+$$
+\{\mathbf e_1,\mathbf e_2,\mathbf e_3\}
+$$
+
+任意向量都可以分解为：
+
+$$
+\mathbf v=v^j\mathbf e_j
+$$
+
+因为 $T$ 是线性的，
+
+$$
+T(\mathbf v)
+=
+v^j T(\mathbf e_j)
+$$
+
+而 $T(\mathbf e_j)$ 仍然是向量，因此可以写成：
+
+$$
+T(\mathbf e_j)=T^i_{\ j}\mathbf e_i
+$$
+
+代入得到：
+
+$$
+\boxed{
+T(\mathbf v)=T^i_{\ j}v^j\mathbf e_i
+}
+$$
+
+所以输出分量满足：
+
+$$
+\boxed{w^i=T^i_{\ j}v^j}
+$$
+
+其中重复指标 $j$ 表示求和。
+
+这就是矩阵乘法的指标形式。
+
+将所有分量排列起来：
+
+$$
+[T]=
+\begin{pmatrix}
+T^1_{\ 1}&T^1_{\ 2}&T^1_{\ 3}\\
+T^2_{\ 1}&T^2_{\ 2}&T^2_{\ 3}\\
+T^3_{\ 1}&T^3_{\ 2}&T^3_{\ 3}
+\end{pmatrix}
+$$
+
+于是：
+
+$$
+[\mathbf w]=[T][\mathbf v]
+$$
+
+因此，在这个意义下：
+
+二阶混合张量对应一个线性算子，而矩阵就是该算子在某组基底下的表示。
+
+这里需要注意一个稍后会用到的区别：二阶协变张量（例如应力双线性形式）也可以用矩阵表示，但它的严格类型是 $(0,2)$，而非上述 $(1,1)$。在欧氏空间的正交归一基底下，通过内积可以将这两种表示联系起来。
+
+#### 二、张量与矩阵最本质的区别：旋转坐标系
+
+假设同一个二维物理对象在原坐标系中的矩阵为：
+
+$$
+A=
+\begin{pmatrix}
+2&0\\
+0&1
+\end{pmatrix}
+$$
+
+现在我们将坐标轴逆时针旋转 $45^\circ$。
+
+令：
+
+$$
+Q=
+\begin{pmatrix}
+\cos\theta&-\sin\theta\\
+\sin\theta&\cos\theta
+\end{pmatrix}
+$$
+
+对于正交旋转，有：
+
+$$
+Q^{-1}=Q^{\mathsf T}
+$$
+
+若新基底由 $Q$ 的列向量给出，则同一个二阶张量在新基底下的矩阵为：
+
+$$
+\boxed{A'=Q^{\mathsf T}AQ}
+$$
+
+代入 $\theta=45^\circ$，得到：
+
+$$
+A'=
+\begin{pmatrix}
+1.5&-0.5\\
+-0.5&1.5
+\end{pmatrix}
+$$
+
+![同一个张量在旋转前后的矩阵表示](/images/fluid-mechanics/tensors/matrix-change.svg)
+
+示意：同一个张量相对于两组不同坐标轴的表示可以不同。椭圆示意对象的主方向保持不变。请特别注意：
+
+原来矩阵的非对角元素是 0，现在变成了 -0.5。
+
+但我们描述的仍然是同一个张量。
+
+为什么？
+
+因为变化的是观察坐标，而不是物理对象。
+
+再看一个重要性质：
+
+$$
+\operatorname{tr}(A)=2+1=3
+$$
+
+$$
+\operatorname{tr}(A')=1.5+1.5=3
+$$
+
+它们的特征值也都等于 $2,1$。
+
+这意味着，对于这种坐标旋转，张量的迹和特征值保持不变。
+
+在流体力学中，这一点特别重要：改变坐标方向，不应该改变物理压力、真实主应力或者真实变形强度。
+
+### 三、流体力学中最重要的张量：应力张量
+
+应力张量是理解二阶张量物理意义的一个非常好的例子。
+
+#### 1. 为什么流体需要应力张量？
+
+考虑流体内部的一个微小立方体。
+
+它的六个表面可能受到不同方向的力。
+
+例如：
+
+- 垂直于 $x$ 轴的面可能承受法向力和切向力。
+- 垂直于 $y$ 轴的面也可能承受法向力和切向力。
+- 垂直于 $z$ 轴的面同样如此。
+
+因此，单个标量不能完整描述各个方向上的受力情况。
+
+一个三维向量也不够，因为它只能描述某一个指定截面上的受力。
+
+我们需要一个对象，能够回答：
+
+> 给定任意一个截面的法向量 $\mathbf n$，这个截面上受到的单位面积作用力是多少？
+
+这个对象就是柯西应力张量（Cauchy Stress Tensor）。
+
+#### 2. 应力张量的矩阵形式
+
+在三维笛卡尔坐标系中，应力张量可以表示为：
+
+$$
+\boxed{
+\boldsymbol{\sigma}=
+\begin{pmatrix}
+\sigma_{xx}&\sigma_{xy}&\sigma_{xz}\\
+\sigma_{yx}&\sigma_{yy}&\sigma_{yz}\\
+\sigma_{zx}&\sigma_{zy}&\sigma_{zz}
+\end{pmatrix}
+}
+$$
+
+这里我们约定：
+
+$$
+\boxed{\sigma_{ij}=\text{法向量沿 }j\text{ 方向的面上，牵引力沿 }i\text{ 方向的分量}}
+$$
+
+因此，矩阵的列对应面的法向方向，行对应作用力方向。
+
+例如：
+
+- $\sigma_{xx}$：在法向为 $x$ 的面上，沿 $x$ 方向的正应力。
+- $\sigma_{yx}$：在法向为 $x$ 的面上，沿 $y$ 方向的剪应力。
+- $\sigma_{xy}$：在法向为 $y$ 的面上，沿 $x$ 方向的剪应力。
+
+不同教材可能交换剪应力的指标排列约定，因此分析前必须确认约定。
+
+#### 3. 应力矩阵如何计算一个面的受力？
+
+这是张量和矩阵联系最直接的体现。
+
+假设某点的应力张量为：
+
+$$
+\boldsymbol{\sigma}=
+\begin{pmatrix}
+10&2&0\\
+2&6&0\\
+0&0&4
+\end{pmatrix}\ \mathrm{Pa}
+$$
+
+在这一点，考虑一个单位法向量为：
+
+$$
+\mathbf n=
+\begin{pmatrix}
+\frac{1}{\sqrt2}\\
+\frac{1}{\sqrt2}\\
+0
+\end{pmatrix}
+$$
+
+的截面。
+
+根据柯西应力定理，截面上的牵引力（单位面积受力）为：
+
+$$
+\boxed{\mathbf t(\mathbf n)=\boldsymbol{\sigma}\mathbf n}
+$$
+
+计算：
+
+$$
+\mathbf t=
+\begin{pmatrix}
+10&2&0\\
+2&6&0\\
+0&0&4
+\end{pmatrix}
+\begin{pmatrix}
+1/\sqrt2\\
+1/\sqrt2\\
+0
+\end{pmatrix}
+$$
+
+得到：
+
+$$
+\boxed{
+\mathbf t=
+\begin{pmatrix}
+6\sqrt2\\
+4\sqrt2\\
+0
+\end{pmatrix}\ \mathrm{Pa}
+}
+$$
+
+这告诉我们，截面的单位面积受力不仅取决于应力张量，还取决于截面的方向。
+
+<TensorExplorer mode="stress" client:visible />
+
+在这个例子中，你改变的不是应力张量，而是截面的法向量。
+
+同一个应力张量作用于不同方向的截面，就会产生不同的牵引力。
+
+这恰恰体现了二阶张量的作用：
+
+$$
+\boxed{\text{输入一个方向向量}\longrightarrow\text{输出该方向对应的受力向量}}
+$$
+
+#### 4. 为什么应力张量一般是对称矩阵？
+
+对于经典的无偶应力连续介质，在通常的角动量守恒条件下：
+
+$$
+\sigma_{ij}=\sigma_{ji}
+$$
+
+因此：
+
+$$
+\boldsymbol{\sigma}
+=
+\boldsymbol{\sigma}^{\mathsf T}
+$$
+
+应力张量是对称的。
+
+三维应力矩阵虽然有九个位置，但只有六个独立分量：
+
+$$
+\sigma_{xx},\sigma_{yy},\sigma_{zz},
+\sigma_{xy},\sigma_{xz},\sigma_{yz}
+$$
+
+这并不是因为所有二阶张量都对称，而是因为应力张量受到物理守恒定律的约束。
+
+### 四、第二个重要例子：速度梯度张量
+
+在流体力学里，除了应力张量，还有一个非常重要的对象：
+
+$$
+\boxed{\nabla\mathbf u}
+$$
+
+它被称为速度梯度张量（Velocity Gradient Tensor）。
+
+#### 1. 为什么速度向量不够用？
+
+设二维速度场：
+
+$$
+\mathbf u(x,y)=
+\begin{pmatrix}
+u(x,y)\\
+v(x,y)
+\end{pmatrix}
+$$
+
+单独知道某一点的速度，只能告诉我们这一点如何移动。
+
+但流体还会发生：
+
+- 拉伸
+- 压缩
+- 剪切变形
+- 旋转
+
+这些现象由相邻位置之间的速度差异产生。
+
+所以必须研究速度对空间位置的变化率。
+
+#### 2. 将速度梯度写成矩阵
+
+采用矩阵第 $i$ 行、第 $j$ 列为 $\partial_j u_i$ 的约定：
+
+$$
+\boxed{
+L=\nabla\mathbf u=
+\begin{pmatrix}
+\frac{\partial u}{\partial x}&\frac{\partial u}{\partial y}\\[5pt]
+\frac{\partial v}{\partial x}&\frac{\partial v}{\partial y}
+\end{pmatrix}
+}
+$$
+
+这个矩阵描述了速度在不同空间方向上的变化。
+
+例如：
+
+$$
+\mathbf u(x,y)=
+\begin{pmatrix}
+2x+y\\
+3x-y
+\end{pmatrix}
+$$
+
+于是：
+
+$$
+L=
+\begin{pmatrix}
+2&1\\
+3&-1
+\end{pmatrix}
+$$
+
+如果在一个流体微团内部取两点，其位置差为：
+
+$$
+\delta\mathbf x=
+\begin{pmatrix}
+\delta x\\
+\delta y
+\end{pmatrix}
+$$
+
+由于速度场可微，对于足够小的距离：
+
+$$
+\delta\mathbf u
+\approx
+L\delta\mathbf x
+$$
+
+即：
+
+$$
+\boxed{
+\begin{pmatrix}
+\delta u\\
+\delta v
+\end{pmatrix}
+\approx
+\begin{pmatrix}
+2&1\\
+3&-1
+\end{pmatrix}
+\begin{pmatrix}
+\delta x\\
+\delta y
+\end{pmatrix}
+}
+$$
+
+这说明，速度梯度张量本质上也是一个线性映射。
+
+它将微小空间位移映射为微小速度变化。
+
+#### 3. 速度梯度分解：变形与旋转
+
+任意方阵 $L$ 都可以分解为：
+
+$$
+\boxed{
+L=D+W
+}
+$$
+
+其中：
+
+$$
+D=\frac12(L+L^{\mathsf T})
+$$
+
+是对称部分，称为应变率张量（Rate-of-Strain Tensor）。
+
+$$
+W=\frac12(L-L^{\mathsf T})
+$$
+
+是反对称部分，称为旋转张量或自旋张量（Spin Tensor）。
+
+代入刚才的例子：
+
+$$
+L=
+\begin{pmatrix}
+2&1\\
+3&-1
+\end{pmatrix}
+$$
+
+得到：
+
+$$
+D=
+\begin{pmatrix}
+2&2\\
+2&-1
+\end{pmatrix}
+$$
+
+$$
+W=
+\begin{pmatrix}
+0&-1\\
+1&0
+\end{pmatrix}
+$$
+
+显然：
+
+$$
+\begin{pmatrix}
+2&2\\
+2&-1
+\end{pmatrix}
++
+\begin{pmatrix}
+0&-1\\
+1&0
+\end{pmatrix}
+=
+\begin{pmatrix}
+2&1\\
+3&-1
+\end{pmatrix}
+$$
+
+但是，这两个矩阵代表的物理意义完全不同。
+
+对称部分 D：变形；反对称部分 W：自旋。
+
+<TensorExplorer mode="motion" client:visible />
+
+我们不仅能把一个复杂的速度变化写成矩阵，还可以利用矩阵的代数结构，分离出不同的物理运动机制。
+
+### 五、张量与 Navier–Stokes 方程有什么关系？
+
+不可压缩牛顿流体的动量方程可以写为：
+
+$$
+\boxed{
+\rho\left(
+\frac{\partial\mathbf u}{\partial t}
++
+(\mathbf u\cdot\nabla)\mathbf u
+\right)
+=
+\nabla\cdot\boldsymbol{\sigma}
++
+\rho\mathbf f
+}
+$$
+
+其中：
+
+- $\rho$：密度
+- $\mathbf u$：速度向量
+- $\boldsymbol{\sigma}$：应力张量
+- $\mathbf f$：单位质量所受的体力
+
+我们重点看：
+
+$$
+\nabla\cdot\boldsymbol{\sigma}
+$$
+
+在三维笛卡尔坐标下，这个运算可以理解成一个二阶张量的散度：
+
+$$
+\boxed{
+(\nabla\cdot\boldsymbol{\sigma})_i
+=
+\sum_{j=1}^{3}
+\frac{\partial\sigma_{ij}}{\partial x_j}
+}
+$$
+
+展开后：
+
+$$
+\nabla\cdot\boldsymbol{\sigma}
+=
+\begin{pmatrix}
+\frac{\partial\sigma_{xx}}{\partial x}
++\frac{\partial\sigma_{xy}}{\partial y}
++\frac{\partial\sigma_{xz}}{\partial z}\\[7pt]
+\frac{\partial\sigma_{yx}}{\partial x}
++\frac{\partial\sigma_{yy}}{\partial y}
++\frac{\partial\sigma_{yz}}{\partial z}\\[7pt]
+\frac{\partial\sigma_{zx}}{\partial x}
++\frac{\partial\sigma_{zy}}{\partial y}
++\frac{\partial\sigma_{zz}}{\partial z}
+\end{pmatrix}
+$$
+
+注意：
+
+$$
+\underbrace{\boldsymbol{\sigma}}_{\text{二阶张量}}
+\quad\xrightarrow{\ \nabla\cdot\ }\quad
+\underbrace{\nabla\cdot\boldsymbol{\sigma}}_{\text{向量}}
+$$
+
+这就是为什么 Navier–Stokes 方程右侧可以得到一个力密度向量。
+
+对于常黏度、不可压缩的牛顿流体：
+
+$$
+\boldsymbol{\sigma}
+=
+-pI+2\mu D
+$$
+
+并且有：
+
+$$
+\nabla\cdot\mathbf u=0
+$$
+
+最终可以得到熟悉的形式：
+
+$$
+\boxed{
+\rho\left(
+\frac{\partial\mathbf u}{\partial t}
++
+(\mathbf u\cdot\nabla)\mathbf u
+\right)
+=
+-\nabla p+\mu\Delta\mathbf u+\rho\mathbf f
+}
+$$
+
+因此，从应力张量到 Navier–Stokes 方程中的压力梯度和黏性扩散项，中间有明确的数学推导关系。
+
+### 六、张量的不同阶数与矩阵的联系
+
+张量不局限于二阶。
+
+在三维流体力学里，可以这样区分：
+
+| 张量类型 | 分量表示 | 分量数量 |
+| --- | --- | --- |
+| 零阶张量（标量） | $p$ | 1 |
+| 一阶张量（向量） | $u_i$ | 3 |
+| 二阶张量 | $\sigma_{ij}$ | 9 |
+| 三阶张量 | $T_{ijk}$ | 27 |
+| 四阶张量 | $C_{ijkl}$ | 81 |
+
+这里说的是一般三维张量的分量位置数量，不代表这些分量总是相互独立。
+
+例如，三维对称二阶张量只有六个独立分量。
+
+一般来说，若向量空间维数为 $n$，一个 $k$ 阶张量的分量数组具有：
+
+$$
+\boxed{n^k}
+$$
+
+个位置。
+
+再看一个非常重要的例子：四阶张量。
+
+在一般线性弹性本构关系中：
+
+$$
+\boxed{\sigma_{ij}=C_{ijkl}\varepsilon_{kl}}
+$$
+
+其中 $C_{ijkl}$ 是四阶弹性张量。
+
+这里对重复的 $k,l$ 求和。
+
+这个公式表示一个四阶张量作用于一个二阶张量，得到另一个二阶张量。
+
+在固体力学、非牛顿流体和各向异性材料研究中，高阶张量尤其常见。
+
+需要特别区分的是：在 NumPy、PyTorch 或 JAX 中，`tensor` 通常泛指多维数组；这种编程语境下的“张量”，未必已经被赋予微分几何意义上的张量变换规律。
+
+### 七、将张量与矩阵的关系彻底总结
+
+| 比较方面 | 矩阵 | 张量 |
+| --- | --- | --- |
+| 本质 | 数字组成的二维数组，也可以用于表示线性映射 | 多重线性对象或张量积空间中的元素 |
+| 是否依赖基底 | 矩阵中的数字依赖所选基底 | 抽象张量不依赖基底 |
+| 维度 | 两个数组轴（行、列） | 任意总阶数 |
+| 变换规律 | 单纯数表无需满足指定规律 | 分量必须满足相应张量变换律 |
+| 流体力学案例 | 一个 $3\times3$ 数表 | 柯西应力张量、速度梯度张量等 |
+
+最后用三个公式记住它们之间的联系：
+
+第一，张量在选定基底下可以用矩阵表示。
+
+$$
+\boldsymbol{\sigma}
+\longleftrightarrow
+[\sigma_{ij}]
+$$
+
+第二，二阶张量可以通过矩阵乘法作用于向量。
+
+$$
+\mathbf t=\boldsymbol{\sigma}\mathbf n
+$$
+
+第三，旋转坐标系时，同一个二阶张量的矩阵表示发生变化。
+
+$$
+A'=Q^{\mathsf T}AQ
+$$
+
+这个旋转变换公式适用于前文约定的正交基底变换；一般曲线坐标下还需要区分协变指标、逆变指标以及相应的雅可比变换。
+
+#### 八、接下来最值得深入的三个问题
+
+对于 PDE 和流体力学研究，理解张量后，建议按下面的顺序继续。
+
+1. 应力张量的严格推导
+
+从流体微元受力分析，到 $\mathbf t=\sigma\mathbf n$，再到动量守恒
+
+2. 速度梯度、应变与涡度之间的关系
+
+弄清楚梯度矩阵、散度、旋度与张量分解
+
+3. 为什么张量不是普通矩阵？
+
+从坐标变换、基底、协变与逆变深入理解张量本质
+
+如果你的目标是理解 Navier–Stokes 方程及相关 PDE，最推荐先掌握第 1 和第 2 部分。它们能让你真正理解为什么流体力学要引入张量，而不是简单地把各种物理量排列成矩阵。
+
+## 问题 3：从微元受力推导柯西应力与动量方程
+
+> **我的问题（原文）**
+>
+> 请从零详细推导流体力学的柯西应力张量，重点解释微小立方体各个面上的力、柯西应力定理 t=σn，以及张量散度是如何进入 Navier–Stokes 方程的。
+
+**回答**
+
+### 从零推导柯西应力张量：从微元受力到 Navier–Stokes 方程
+
+我们这次按照连续介质力学的数学逻辑，从最基础的受力分析开始，完整建立以下推导链：
+
+$$
+\boxed{
+\text{面上的力}
+\;\longrightarrow\;
+\text{应力向量}
+\;\longrightarrow\;
+\text{柯西应力张量}
+\;\longrightarrow\;
+\nabla\cdot\boldsymbol{\sigma}
+\;\longrightarrow\;
+\text{Navier–Stokes 方程}
+}
+$$
+
+最重要的不是记住一个 $3\times3$ 矩阵，而是理解：
+
+为什么流体内部的力需要用二阶张量描述？为什么这个张量乘以一个法向量，就能给出任意截面上的受力？为什么应力张量取散度后，又恰好成为流体动量方程中的力密度？
+
+整个推导分为六个环节：
+
+1. 从牛顿第二定律出发，区分体积力与表面力。
+2. 用微小立方体认识九个应力分量。
+3. 使用柯西四面体论证，推导 $\mathbf t=\boldsymbol{\sigma}\mathbf n$。
+4. 用微小立方体的力平衡推导应力张量散度。
+5. 从动量守恒推导柯西动量方程。
+6. 引入牛顿流体本构关系，得到 Navier–Stokes 方程。
+
+先统一一个贯穿全文的约定：
+
+$$
+\boxed{
+\sigma_{ij}:
+\text{法向沿 }x_j\text{ 的面上，沿 }x_i\text{ 方向的应力分量}
+}
+$$
+
+即第一个指标表示力的方向，第二个指标表示面的法向方向。
+
+这项约定非常重要，因为某些工程力学教材会采用相反的指标排列方式。
+
+### 一、从牛顿第二定律开始：流体为什么会受到力？
+
+#### 1. 考虑流体内部的一小块物质
+
+想象水管中流动的一团水。
+
+我们从中选取一个极小的长方体流体微元，边长为：
+
+$$
+dx,\qquad dy,\qquad dz
+$$
+
+它的体积是：
+
+$$
+dV=dx\,dy\,dz
+$$
+
+如果密度为 $\rho$，它的质量就是：
+
+$$
+dm=\rho\,dV
+$$
+
+按照牛顿第二定律：
+
+$$
+\boxed{\text{合外力}=\text{质量}\times\text{加速度}}
+$$
+
+即：
+
+$$
+d\mathbf F=\rho\,dV\,\mathbf a
+$$
+
+问题在于：流体微元受到的力究竟来自哪里？
+
+在连续介质力学中，通常将它分成两类。
+
+#### 2. 第一类：体积力（Body Force）
+
+体积力作用于流体的整个体积。
+
+最典型的例子是重力。
+
+假设单位质量受到的体积力为 $\mathbf b$，则单位体积受到的体积力为：
+
+$$
+\rho\mathbf b
+$$
+
+因此，微元受到的总体积力为：
+
+$$
+\boxed{
+d\mathbf F_{\mathrm{body}}
+=
+\rho\mathbf b\,dV
+}
+$$
+
+对于重力：
+
+$$
+\mathbf b=\mathbf g
+$$
+
+所以：
+
+$$
+d\mathbf F_{\mathrm{gravity}}
+=
+\rho\mathbf g\,dV
+$$
+
+这里请注意两个单位：
+
+$$
+[\mathbf b]=\mathrm{m/s^2}
+$$
+
+$$
+[\rho\mathbf b]=\mathrm{N/m^3}
+$$
+
+也就是说，$\mathbf b$ 是单位质量所受的力，而 $\rho\mathbf b$ 才是单位体积所受的力。
+
+#### 3. 第二类：表面力（Surface Force）
+
+与重力不同，流体中的压力和黏性作用是通过相邻流体之间的接触面传递的。
+
+考虑把流体想象地切开，在切面上，切面两侧的流体会相互施加作用力。
+
+定义单位面积上的接触力为：
+
+$$
+\boxed{
+\mathbf t(\mathbf n)
+=
+\lim_{\Delta A\to0}
+\frac{\Delta\mathbf F_{\mathrm{surface}}}{\Delta A}
+}
+$$
+
+这个向量叫做牵引力向量（Traction Vector），也称应力向量。
+
+其中：
+
+- $\Delta A$ 表示微小截面面积。
+- $\Delta\mathbf F_{\mathrm{surface}}$ 表示截面受到的接触力。
+- $\mathbf n$ 是截面的单位法向量。
+
+它的单位是：
+
+$$
+[\mathbf t]=\mathrm{N/m^2}=\mathrm{Pa}
+$$
+
+最关键的一点是：
+
+一个截面上的力不一定垂直于该截面。
+
+例如，一个水平截面可以同时受到竖直的压力作用以及水平方向的黏性剪切作用。
+
+因此，牵引力必须是向量：
+
+$$
+\mathbf t=
+\begin{pmatrix}
+t_x\\
+t_y\\
+t_z
+\end{pmatrix}
+$$
+
+而且不同方向的截面一般会有不同的牵引力。
+
+所以我们将它写作：
+
+$$
+\boxed{\mathbf t(\mathbf n)}
+$$
+
+括号里的 $\mathbf n$ 表明：截面方向会影响该截面受到的力。
+
+现在出现一个核心问题：
+
+假设我们知道三个坐标方向截面上的牵引力，是否就能计算任意倾斜截面的牵引力？
+
+答案是可以。这正是柯西应力定理所要证明的内容。
+
+### 二、微小立方体：九个应力分量是怎么来的？
+
+![流体微元各面上的正应力与剪应力，图中采用面法向在前的指标约定](/images/fluid-mechanics/tensors/shear-and-normal-stresses.png)
+
+图源：Joseasorrentino，[Shear and normal stresses，Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Shear_and_normal_stresses.png)，[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)。这里使用用户提供的同图副本，保留图中内容，网页等比显示；该图片按原授权使用。
+
+**读图时必须先核对两个下标。** 这张图的第一个下标表示**面的法向**，第二个下标表示**应力的方向**。例如右侧 $x$ 面上向上的箭头记为 $\sigma_{xy}$。本文采用 $t_i=\sigma_{ij}n_j$，即第一个下标表示力的方向、第二个下标表示面的法向，所以同一箭头在本文记为 $\sigma_{yx}$。若把图中的分量排列记为 $S$，本文的矩阵就是 $\sigma=S^{\mathsf T}$，图的约定对应 $\mathbf t=S^{\mathsf T}\mathbf n$。经典无偶应力流体中应力对称，两种排列数值相同，但仍要区分下标的物理含义。
+
+图中 $i=j$ 的三个分量是正应力，其余六个是剪应力。下面的站内 SVG 按**本文约定**绘制，每一列对应一个正向坐标面上的牵引矢量，可与上图对照阅读。
+
+![微元的三个正向面与应力矩阵的三列](/images/fluid-mechanics/tensors/stress-faces.svg)
+
+#### 1. 一个立方体有六个面
+
+取三个笛卡尔坐标方向：
+
+$$
+\mathbf e_x,\qquad\mathbf e_y,\qquad\mathbf e_z
+$$
+
+一个微小立方体有六个面，单位外法向分别为：
+
+$$
++\mathbf e_x,\quad-\mathbf e_x,\quad
++\mathbf e_y,\quad-\mathbf e_y,\quad
++\mathbf e_z,\quad-\mathbf e_z
+$$
+
+每个面都可能受到一个三维牵引力向量。
+
+于是，我们需要知道每个面上的三个受力分量。
+
+下面用三个正向面说明。
+
+#### 2. 法向沿 $x$ 方向的面
+
+对于法向为 $\mathbf e_x$ 的面：
+
+$$
+\mathbf t(\mathbf e_x)=
+\begin{pmatrix}
+\sigma_{xx}\\
+\sigma_{yx}\\
+\sigma_{zx}
+\end{pmatrix}
+$$
+
+$$
+\sigma_{xx}:
+\text{沿 }x\text{ 方向的正应力}
+$$
+
+$$
+\sigma_{yx}:
+\text{沿 }y\text{ 方向的剪应力}
+$$
+
+$$
+\sigma_{zx}:
+\text{沿 }z\text{ 方向的剪应力}
+$$
+
+所以，这个面需要三个数字描述其受力。
+
+#### 3. 另外两个正向面
+
+同理，在法向沿 $y$ 的面上：
+
+$$
+\mathbf t(\mathbf e_y)=
+\begin{pmatrix}
+\sigma_{xy}\\
+\sigma_{yy}\\
+\sigma_{zy}
+\end{pmatrix}
+$$
+
+在法向沿 $z$ 的面上：
+
+$$
+\mathbf t(\mathbf e_z)=
+\begin{pmatrix}
+\sigma_{xz}\\
+\sigma_{yz}\\
+\sigma_{zz}
+\end{pmatrix}
+$$
+
+将这三个向量排列为矩阵的三列：
+
+$$
+\boxed{
+\boldsymbol{\sigma}=
+\begin{pmatrix}
+\sigma_{xx}&\sigma_{xy}&\sigma_{xz}\\
+\sigma_{yx}&\sigma_{yy}&\sigma_{yz}\\
+\sigma_{zx}&\sigma_{zy}&\sigma_{zz}
+\end{pmatrix}
+}
+$$
+
+这就是三维流体力学中的柯西应力张量。
+
+请观察矩阵的结构：
+
+$$
+\boldsymbol{\sigma}
+=
+\begin{pmatrix}
+|&|&|\\
+\mathbf t(\mathbf e_x)&\mathbf t(\mathbf e_y)&\mathbf t(\mathbf e_z)\\
+|&|&|
+\end{pmatrix}
+$$
+
+你现在就可以理解：为什么它能够用矩阵表示。
+
+它把三个基准截面上的牵引力向量组织到一个矩阵中。
+
+但这还没有证明，知道这三个方向的受力，就一定可以知道任意方向截面的受力。
+
+这需要下一步的柯西四面体论证。
+
+### 三、柯西应力定理：为什么 $\mathbf t(\mathbf n)=\boldsymbol{\sigma}\mathbf n$？
+
+这是整套理论最重要的一步。
+
+我们最终要证明：
+
+$$
+\boxed{
+t_i(\mathbf n)=\sigma_{ij}n_j
+}
+$$
+
+或者写成矩阵：
+
+$$
+\boxed{
+\mathbf t(\mathbf n)
+=
+\begin{pmatrix}
+\sigma_{xx}&\sigma_{xy}&\sigma_{xz}\\
+\sigma_{yx}&\sigma_{yy}&\sigma_{yz}\\
+\sigma_{zx}&\sigma_{zy}&\sigma_{zz}
+\end{pmatrix}
+\begin{pmatrix}
+n_x\\n_y\\n_z
+\end{pmatrix}
+}
+$$
+
+它意味着：在固定空间位置和时刻，牵引力对截面单位法向量是一个线性映射。
+
+#### 1. 为什么用四面体证明，而不是立方体？
+
+立方体只能直接提供三个相互垂直的坐标方向。
+
+但我们需要知道一个倾斜截面的受力情况。
+
+因此，取一个非常小的四面体，其三个面分别垂直于 $x,y,z$ 轴，第四个面为任意倾斜面。
+
+$$
+\Delta A
+$$
+
+外单位法向量：
+
+$$
+\mathbf n=
+\begin{pmatrix}
+n_x\\n_y\\n_z
+\end{pmatrix}
+$$
+
+首先考虑：
+
+$$
+n_x>0,\qquad n_y>0,\qquad n_z>0
+$$
+
+于是另外三个坐标面的外法向量分别是：
+
+$$
+-\mathbf e_x,\qquad
+-\mathbf e_y,\qquad
+-\mathbf e_z
+$$
+
+![四面体斜面和坐标面的投影面积关系](/images/fluid-mechanics/tensors/cauchy-tetrahedron.svg)
+
+#### 2. 推导四个面的面积关系
+
+设三个坐标面的面积分别为：
+
+$$
+\Delta A_x,\quad\Delta A_y,\quad\Delta A_z
+$$
+
+为什么有：
+
+$$
+\boxed{
+\Delta A_x=n_x\Delta A
+}
+$$
+
+以及：
+
+$$
+\boxed{
+\Delta A_y=n_y\Delta A,\qquad
+\Delta A_z=n_z\Delta A
+}
+$$
+
+原因是倾斜面在坐标平面上的正交投影面积。
+
+更一般地，某个面积元的有向面积向量定义为：
+
+$$
+d\mathbf A=\mathbf n\,dA
+$$
+
+它在 $x$ 轴上的分量是：
+
+$$
+dA_x=n_x\,dA
+$$
+
+在 $y,z$ 轴上同理。
+
+因此，对这个平面三角形：
+
+$$
+\begin{pmatrix}
+\Delta A_x\\
+\Delta A_y\\
+\Delta A_z
+\end{pmatrix}
+=
+\Delta A
+\begin{pmatrix}
+n_x\\
+n_y\\
+n_z
+\end{pmatrix}
+$$
+
+目前三个 $n_i$ 都是正数，因此不需要绝对值。对于任意方向的 $\mathbf n$，无向投影面积是 $|n_i|\Delta A$，而有向投影保留 $n_i$ 的符号。
+
+这也是之后公式中出现 $n_x,n_y,n_z$ 的直接几何原因。
+
+#### 3. 对四面体应用牛顿第二定律
+
+流体微元受到四个表面力，加上体积力。
+
+首先，倾斜面上的力：
+
+$$
+\mathbf F_n=\mathbf t(\mathbf n)\Delta A
+$$
+
+三个坐标面上的力分别为：
+
+$$
+\mathbf F_x=\mathbf t(-\mathbf e_x)\Delta A_x
+$$
+
+$$
+\mathbf F_y=\mathbf t(-\mathbf e_y)\Delta A_y
+$$
+
+$$
+\mathbf F_z=\mathbf t(-\mathbf e_z)\Delta A_z
+$$
+
+体积力：
+
+$$
+\mathbf F_b=\rho\mathbf b\,\Delta V
+$$
+
+牛顿第二定律给出：
+
+$$
+\begin{aligned}
+&\mathbf t(\mathbf n)\Delta A\\
+&+\mathbf t(-\mathbf e_x)\Delta A_x\\
+&+\mathbf t(-\mathbf e_y)\Delta A_y\\
+&+\mathbf t(-\mathbf e_z)\Delta A_z\\
+&+\rho\mathbf b\,\Delta V
+=
+\int_{\Delta V}\rho\mathbf a\,dV
+\end{aligned}
+$$
+
+为简化讨论，我们考虑流体微元趋于同一点的极限。
+
+如果该处密度、加速度、体积力和牵引力足够规则，平均值也趋于该点的值。
+
+这时可以研究各项如何随尺寸缩小。
+
+#### 4. 面积项与体积项的数量级不同
+
+假设这个四面体的特征长度是 $h$。
+
+则：
+
+$$
+\Delta A=O(h^2)
+$$
+
+$$
+\Delta V=O(h^3)
+$$
+
+这里的 $O(h^2)$ 表示面积项随 $h^2$ 的数量级缩小。
+
+而体积力、惯性项在上述有界性假设下都是 $O(h^3)$。
+
+将动量平衡方程除以 $\Delta A$，再令：
+
+$$
+h\to0
+$$
+
+由于：
+
+$$
+\frac{\Delta V}{\Delta A}=O(h)\to0
+$$
+
+体积力和惯性项相对于面积项的贡献趋于零。
+
+因此得到：
+
+$$
+\mathbf t(\mathbf n)
++
+n_x\mathbf t(-\mathbf e_x)
++
+n_y\mathbf t(-\mathbf e_y)
++
+n_z\mathbf t(-\mathbf e_z)
+=0
+$$
+
+注意：这并不是认为流体没有加速度，也不是在假设静力平衡。
+
+而是说，在这个极限过程中，惯性项和体积力项比面积力项缩小得更快。
+
+#### 5. 为什么 $\mathbf t(-\mathbf n)=-\mathbf t(\mathbf n)$？
+
+考虑流体内部两个相邻的微小区域，它们共享同一个截面。
+
+其中一个区域的外法向为 $\mathbf n$，另一个区域的外法向为 $-\mathbf n$。
+
+根据相邻连续介质之间的作用力与反作用力关系：
+
+$$
+\boxed{
+\mathbf t(-\mathbf n)=-\mathbf t(\mathbf n)
+}
+$$
+
+这个结论可以由跨越同一截面的薄片微元动量平衡，在厚度趋于零时得到。
+
+利用这一性质：
+
+$$
+\mathbf t(-\mathbf e_x)
+=
+-\mathbf t(\mathbf e_x)
+$$
+
+同理可得另外两个方向。
+
+于是四面体力平衡变成：
+
+$$
+\mathbf t(\mathbf n)
+=
+n_x\mathbf t(\mathbf e_x)
++
+n_y\mathbf t(\mathbf e_y)
++
+n_z\mathbf t(\mathbf e_z)
+$$
+
+这就是关键的一步。
+
+对于其他符号组合的法向量，使用对应坐标面与有向面积也能得到同样关系。
+
+#### 6. 将三个牵引力向量排列成矩阵
+
+我们已经定义：
+
+$$
+\mathbf t(\mathbf e_x)=
+\begin{pmatrix}
+\sigma_{xx}\\\sigma_{yx}\\\sigma_{zx}
+\end{pmatrix}
+$$
+
+$$
+\mathbf t(\mathbf e_y)=
+\begin{pmatrix}
+\sigma_{xy}\\\sigma_{yy}\\\sigma_{zy}
+\end{pmatrix}
+$$
+
+$$
+\mathbf t(\mathbf e_z)=
+\begin{pmatrix}
+\sigma_{xz}\\\sigma_{yz}\\\sigma_{zz}
+\end{pmatrix}
+$$
+
+所以：
+
+$$
+\begin{aligned}
+\mathbf t(\mathbf n)
+={}&n_x
+\begin{pmatrix}\sigma_{xx}\\\sigma_{yx}\\\sigma_{zx}\end{pmatrix}
++n_y
+\begin{pmatrix}\sigma_{xy}\\\sigma_{yy}\\\sigma_{zy}\end{pmatrix}\\
+&+n_z
+\begin{pmatrix}\sigma_{xz}\\\sigma_{yz}\\\sigma_{zz}\end{pmatrix}
+\end{aligned}
+$$
+
+将相应的系数整理到一起：
+
+$$
+\boxed{
+\mathbf t(\mathbf n)=
+\begin{pmatrix}
+\sigma_{xx}&\sigma_{xy}&\sigma_{xz}\\
+\sigma_{yx}&\sigma_{yy}&\sigma_{yz}\\
+\sigma_{zx}&\sigma_{zy}&\sigma_{zz}
+\end{pmatrix}
+\begin{pmatrix}n_x\\n_y\\n_z\end{pmatrix}
+}
+$$
+
+至此，我们得到了：
+
+$$
+\boxed{\mathbf t(\mathbf n)=\boldsymbol{\sigma}\mathbf n}
+$$
+
+这就是柯西应力定理（Cauchy's Stress Theorem）。
+
+更准确地说，这一推导依赖经典连续介质的一组假设：接触作用力可以由局部牵引力密度描述，没有额外的奇异表面力，且所讨论的场足够规则。
+
+##### 到这里，张量与矩阵的联系应该已经清楚了
+
+柯西应力张量在数学上描述一个线性映射：
+
+$$
+\boxed{
+\boldsymbol{\sigma}:\mathbf n\mapsto\mathbf t(\mathbf n)
+}
+$$
+
+即：
+
+输入：截面单位法向量
+
+$\mathbf n=(n_x,n_y,n_z)^{\mathsf T}$应力张量：一个线性映射
+
+$\boldsymbol{\sigma}=[\sigma_{ij}]$输出：该截面上的单位面积受力
+
+$\mathbf t=\boldsymbol{\sigma}\mathbf n$矩阵是线性映射的坐标表示，而不是额外引入的物理力。
+
+### 四、应力张量为什么通常是对称矩阵？
+
+在很多流体力学教材中，应力矩阵直接写成：
+
+$$
+\boldsymbol{\sigma}=
+\begin{pmatrix}
+\sigma_{xx}&\sigma_{xy}&\sigma_{xz}\\
+\sigma_{xy}&\sigma_{yy}&\sigma_{yz}\\
+\sigma_{xz}&\sigma_{yz}&\sigma_{zz}
+\end{pmatrix}
+$$
+
+也就是说：
+
+$$
+\boxed{\sigma_{ij}=\sigma_{ji}}
+$$
+
+为什么？
+
+这个性质来自角动量守恒，而不是矩阵本身必须对称。
+
+#### 1. 用二维微元理解
+
+设微小矩形边长为：
+
+$$
+dx,\qquad dy
+$$
+
+厚度为 $dz$。
+
+我们暂时只考虑 $xy$ 平面内产生绕 $z$ 轴转矩的剪应力。
+
+- 在法向为 $x$ 的两个面上，$\sigma_{yx}$ 产生绕 $z$ 轴的转矩。
+- 在法向为 $y$ 的两个面上，$\sigma_{xy}$ 产生方向相反的转矩。
+
+对于这个微小长方体，以中心为转动中心，计算两组剪应力产生的合力矩。
+
+来自 $x$ 方向两侧面的转矩为：
+
+$$
+M_z^{(x)}
+=
+\sigma_{yx}(dy\,dz)\frac{dx}{2}\times2
+$$
+
+所以：
+
+$$
+M_z^{(x)}=\sigma_{yx}\,dV
+$$
+
+另外两个面：
+
+$$
+M_z^{(y)}=-\sigma_{xy}\,dV
+$$
+
+因此，主要剪应力转矩之和为：
+
+$$
+M_z=(\sigma_{yx}-\sigma_{xy})dV
+$$
+
+对于经典不含内部偶应力、偶力和独立微旋转自由度的流体微元，角动量平衡在局部极限下要求：
+
+$$
+\sigma_{yx}-\sigma_{xy}=0
+$$
+
+即：
+
+$$
+\boxed{\sigma_{yx}=\sigma_{xy}}
+$$
+
+同理：
+
+$$
+\sigma_{xz}=\sigma_{zx}
+$$
+
+$$
+\sigma_{yz}=\sigma_{zy}
+$$
+
+最终：
+
+$$
+\boxed{\boldsymbol{\sigma}^{\mathsf T}=\boldsymbol{\sigma}}
+$$
+
+这里的微元转矩分析只写出了主导的剪应力贡献；完整的局部角动量平衡还需要正确处理力的空间变化和角动量变化。最终结论仍是经典柯西应力张量的对称性。
+
+在具有微结构、内部偶应力或微旋转自由度的广义连续介质模型中，应力张量未必满足这一对称条件。
+
+### 五、最重要的第二个推导：为什么会出现 $\nabla\cdot\boldsymbol{\sigma}$？
+
+前面已经知道：
+
+$$
+\mathbf t=\boldsymbol{\sigma}\mathbf n
+$$
+
+现在要回答：
+
+> 已知微小流体立方体每个面上的应力，怎样计算六个面产生的总合力？
+
+我们将直接从最基本的力的相加开始，而不是一上来就使用散度定理。
+
+#### 1. 首先只研究 $x$ 方向上的合力
+
+设微元中心位于：
+
+$$
+(x,y,z)
+$$
+
+其边长为：
+
+$$
+dx,\quad dy,\quad dz
+$$
+
+体积：
+
+$$
+dV=dx\,dy\,dz
+$$
+
+沿 $x$ 方向有两个相对的面：
+
+$$
+x+\frac{dx}{2}
+$$
+
+和：
+
+$$
+x-\frac{dx}{2}
+$$
+
+右侧面的外法向量为：
+
+$$
+\mathbf n_+=\mathbf e_x
+$$
+
+左侧面的外法向量为：
+
+$$
+\mathbf n_-=-\mathbf e_x
+$$
+
+面积均为：
+
+$$
+dA_x=dy\,dz
+$$
+
+#### 2. 右侧面上的力
+
+根据柯西应力定理：
+
+$$
+\mathbf t_+
+=
+\boldsymbol{\sigma}
+\left(x+\frac{dx}{2},y,z\right)\mathbf e_x
+$$
+
+因为：
+
+$$
+\boldsymbol{\sigma}\mathbf e_x=
+\begin{pmatrix}
+\sigma_{xx}\\
+\sigma_{yx}\\
+\sigma_{zx}
+\end{pmatrix}
+$$
+
+所以右侧面的表面力为：
+
+$$
+\mathbf F_+
+=
+\begin{pmatrix}
+\sigma_{xx}(x+\frac{dx}{2})\\
+\sigma_{yx}(x+\frac{dx}{2})\\
+\sigma_{zx}(x+\frac{dx}{2})
+\end{pmatrix}
+dy\,dz
+$$
+
+这里为了简洁，暂时省略函数参数中的 $y,z,t$。
+
+#### 3. 左侧面上的力
+
+左侧面的外法向量为负：
+
+$$
+\mathbf n_-=-\mathbf e_x
+$$
+
+因此：
+
+$$
+\mathbf F_-=
+-
+\begin{pmatrix}
+\sigma_{xx}(x-\frac{dx}{2})\\
+\sigma_{yx}(x-\frac{dx}{2})\\
+\sigma_{zx}(x-\frac{dx}{2})
+\end{pmatrix}
+dy\,dz
+$$
+
+注意这个负号。
+
+它来自左侧面的外法向量，而不是说所有应力分量的数值都是负的。
+
+#### 4. 两个面的合力
+
+将两者相加：
+
+$$
+\begin{aligned}
+\mathbf F_x
+=
+\bigg[
+&\begin{pmatrix}
+\sigma_{xx}(x+\frac{dx}{2})\\
+\sigma_{yx}(x+\frac{dx}{2})\\
+\sigma_{zx}(x+\frac{dx}{2})
+\end{pmatrix}\\
+-&\begin{pmatrix}
+\sigma_{xx}(x-\frac{dx}{2})\\
+\sigma_{yx}(x-\frac{dx}{2})\\
+\sigma_{zx}(x-\frac{dx}{2})
+\end{pmatrix}
+\bigg]dy\,dz
+\end{aligned}
+$$
+
+现在使用一元泰勒展开：
+
+$$
+f(x+h)=f(x)+hf'(x)+\frac{h^2}{2}f''(x)+\cdots
+$$
+
+以及：
+
+$$
+f(x-h)=f(x)-hf'(x)+\frac{h^2}{2}f''(x)+\cdots
+$$
+
+两式相减：
+
+$$
+f(x+h)-f(x-h)
+=
+2hf'(x)+\text{高阶项}
+$$
+
+取：
+
+$$
+h=\frac{dx}{2}
+$$
+
+得到：
+
+$$
+f(x+\tfrac{dx}{2})
+-
+f(x-\tfrac{dx}{2})
+=
+\frac{\partial f}{\partial x}dx
++
+o(dx)
+$$
+
+所以，在微元趋于零的主导阶上：
+
+$$
+\mathbf F_x
+=
+\begin{pmatrix}
+\frac{\partial\sigma_{xx}}{\partial x}\\[4pt]
+\frac{\partial\sigma_{yx}}{\partial x}\\[4pt]
+\frac{\partial\sigma_{zx}}{\partial x}
+\end{pmatrix}
+dx\,dy\,dz
++
+\text{高阶项}
+$$
+
+即：
+
+$$
+\boxed{
+\mathbf F_x
+\approx
+\frac{\partial}{\partial x}
+\begin{pmatrix}
+\sigma_{xx}\\
+\sigma_{yx}\\
+\sigma_{zx}
+\end{pmatrix}dV
+}
+$$
+
+这是非常关键的结论：
+
+相对两个面产生的合力，取决于应力沿这两个面之间的空间变化，而不仅仅取决于应力本身的大小。
+
+例如，如果 $\sigma_{xx}$ 在 $x$ 方向处处相同，那么两个相对面上的法向应力作用力相互抵消，它们对微元的 $x$ 向净力就是零。
+
+#### 5. 同理计算 $y,z$ 两组面
+
+对于 $y$ 方向上的两个相对面：
+
+$$
+\boxed{
+\mathbf F_y
+\approx
+\frac{\partial}{\partial y}
+\begin{pmatrix}
+\sigma_{xy}\\
+\sigma_{yy}\\
+\sigma_{zy}
+\end{pmatrix}dV
+}
+$$
+
+对于 $z$ 方向上的两个相对面：
+
+$$
+\boxed{
+\mathbf F_z
+\approx
+\frac{\partial}{\partial z}
+\begin{pmatrix}
+\sigma_{xz}\\
+\sigma_{yz}\\
+\sigma_{zz}
+\end{pmatrix}dV
+}
+$$
+
+将三组力相加，得到：
+
+$$
+\mathbf F_{\mathrm{surface}}
+=
+\mathbf F_x+\mathbf F_y+\mathbf F_z
+$$
+
+因此在微元极限下：
+
+$$
+\boxed{
+\frac{\mathbf F_{\mathrm{surface}}}{dV}
+\longrightarrow
+\begin{pmatrix}
+\frac{\partial\sigma_{xx}}{\partial x}
++\frac{\partial\sigma_{xy}}{\partial y}
++\frac{\partial\sigma_{xz}}{\partial z}\\[8pt]
+\frac{\partial\sigma_{yx}}{\partial x}
++\frac{\partial\sigma_{yy}}{\partial y}
++\frac{\partial\sigma_{yz}}{\partial z}\\[8pt]
+\frac{\partial\sigma_{zx}}{\partial x}
++\frac{\partial\sigma_{zy}}{\partial y}
++\frac{\partial\sigma_{zz}}{\partial z}
+\end{pmatrix}
+}
+$$
+
+这一个向量就是：
+
+$$
+\boxed{\nabla\cdot\boldsymbol{\sigma}}
+$$
+
+所以：
+
+$$
+\boxed{
+\text{单位体积所受的净表面力}
+=
+\nabla\cdot\boldsymbol{\sigma}
+}
+$$
+
+这里的等式是局部连续介质极限下的等式。
+
+#### 6. 从矩阵角度理解张量散度
+
+写成：
+
+$$
+\boldsymbol{\sigma}=
+\begin{pmatrix}
+\sigma_{xx}&\sigma_{xy}&\sigma_{xz}\\
+\sigma_{yx}&\sigma_{yy}&\sigma_{yz}\\
+\sigma_{zx}&\sigma_{zy}&\sigma_{zz}
+\end{pmatrix}
+$$
+
+那么：
+
+$$
+\boxed{
+(\nabla\cdot\boldsymbol{\sigma})_i
+=
+\sum_{j=1}^3
+\frac{\partial\sigma_{ij}}{\partial x_j}
+}
+$$
+
+采用爱因斯坦求和约定：
+
+$$
+\boxed{
+(\nabla\cdot\boldsymbol{\sigma})_i
+=
+\partial_j\sigma_{ij}
+}
+$$
+
+也就是说：
+
+- 对第 1 列关于 $x$ 求偏导。
+- 对第 2 列关于 $y$ 求偏导。
+- 对第 3 列关于 $z$ 求偏导。
+- 再把这三个列向量相加。
+
+$$
+\nabla\cdot\boldsymbol{\sigma}
+  =
+  \underbrace{
+  \frac{\partial}{\partial x}
+  \begin{pmatrix}
+  \sigma_{xx}\\\sigma_{yx}\\\sigma_{zx}
+  \end{pmatrix}}_{\text{x 方向两面}}
+  +
+  \underbrace{
+  \frac{\partial}{\partial y}
+  \begin{pmatrix}
+  \sigma_{xy}\\\sigma_{yy}\\\sigma_{zy}
+  \end{pmatrix}}_{\text{y 方向两面}}
+  +
+  \underbrace{
+  \frac{\partial}{\partial z}
+  \begin{pmatrix}
+  \sigma_{xz}\\\sigma_{yz}\\\sigma_{zz}
+  \end{pmatrix}}_{\text{z 方向两面}}
+$$
+
+它的物理意义是：
+
+$$
+\text{二阶应力张量的散度}
+\quad\longrightarrow\quad
+\text{三维力密度向量}
+$$
+
+这也说明为什么张量散度运算会将一个二阶张量变为一阶张量（向量）。
+
+#### 7. 用一个具体例子检验
+
+设二维流体的应力张量为：
+
+$$
+\boldsymbol{\sigma}(x,y)=
+\begin{pmatrix}
+2x&y\\
+y&3x
+\end{pmatrix}
+\quad\mathrm{Pa}
+$$
+
+其中令 $x,y$ 为以米计的坐标数值，相应系数含有保证单位正确的量纲。
+
+则：
+
+$$
+\nabla\cdot\boldsymbol{\sigma}
+=
+\begin{pmatrix}
+\frac{\partial(2x)}{\partial x}+
+\frac{\partial y}{\partial y}\\[6pt]
+\frac{\partial y}{\partial x}+
+\frac{\partial(3x)}{\partial y}
+\end{pmatrix}
+$$
+
+分别计算：
+
+$$
+\frac{\partial(2x)}{\partial x}=2
+$$
+
+$$
+\frac{\partial y}{\partial y}=1
+$$
+
+$$
+\frac{\partial y}{\partial x}=0,\qquad
+\frac{\partial(3x)}{\partial y}=0
+$$
+
+因此：
+
+$$
+\boxed{
+\nabla\cdot\boldsymbol{\sigma}
+=
+\begin{pmatrix}
+3\\0
+\end{pmatrix}\ \mathrm{N/m^3}
+}
+$$
+
+这意味着该应力场对单位体积流体产生沿 $x$ 正方向的净表面力，大小为 $3\ \mathrm{N/m^3}$。
+
+注意：虽然应力矩阵随空间位置变化，但不代表净力一定在每个方向都非零。只有对应的导数组合决定局部净表面力。
+
+### 六、与高斯散度定理的联系
+
+前面是从立方体六个面的力直接推导的。
+
+现在换一种更一般、更严谨的方式。
+
+设任意流体物质体积为 $\Omega$，其边界为 $\partial\Omega$。
+
+边界上的单位外法向为：
+
+$$
+\mathbf n
+$$
+
+根据柯西应力定理，边界受到的总表面力是：
+
+$$
+\mathbf F_{\mathrm{surface}}
+=
+\int_{\partial\Omega}\mathbf t(\mathbf n)\,dS
+$$
+
+代入：
+
+$$
+\mathbf t(\mathbf n)=\boldsymbol{\sigma}\mathbf n
+$$
+
+得到：
+
+$$
+\mathbf F_{\mathrm{surface}}
+=
+\int_{\partial\Omega}
+\boldsymbol{\sigma}\mathbf n\,dS
+$$
+
+现在考虑其第 $i$ 个分量：
+
+$$
+(F_{\mathrm{surface}})_i
+=
+\int_{\partial\Omega}
+\sigma_{ij}n_j\,dS
+$$
+
+固定 $i$，把 $(\sigma_{i1},\sigma_{i2},\sigma_{i3})$ 看成一个向量场。
+
+使用高斯散度定理：
+
+$$
+\int_{\partial\Omega}
+\sigma_{ij}n_j\,dS
+=
+\int_\Omega
+\frac{\partial\sigma_{ij}}{\partial x_j}
+\,dV
+$$
+
+对 $i=1,2,3$ 分别成立，因此：
+
+$$
+\boxed{
+\int_{\partial\Omega}
+\boldsymbol{\sigma}\mathbf n\,dS
+=
+\int_\Omega
+\nabla\cdot\boldsymbol{\sigma}\,dV
+}
+$$
+
+这是流体力学里极其重要的恒等式。
+
+左侧是边界上所有表面作用力的总和。
+
+右侧是将局部应力散度在整个体积内积分。
+
+因此：
+
+$$
+\boxed{
+\text{边界表面力积分}
+=
+\text{体积内部的应力散度积分}
+}
+$$
+
+两者描述的是同一物理过程。
+
+这个公式也是有限体积法（FVM）的数学基础之一：在数值计算中，可以通过控制体各个面的通量，计算控制体内部的动量变化。
+
+### 七、从动量守恒推导柯西动量方程
+
+有了应力张量和它的散度，我们终于可以推导流体的运动方程。
+
+#### 1. 选择一个随流体运动的物质体积
+
+设 $\Omega(t)$ 是一个随流体运动的物质体积。
+
+因为它始终包含同一批流体质点，所以可以直接使用牛顿第二定律：
+
+$$
+\boxed{
+\frac{d}{dt}
+\int_{\Omega(t)}\rho\mathbf u\,dV
+=
+\mathbf F_{\mathrm{total}}
+}
+$$
+
+左边是物质体积总动量对时间的变化率。
+
+右边是总外力。
+
+总外力由体积力和表面力组成：
+
+$$
+\mathbf F_{\mathrm{total}}
+=
+\int_{\Omega(t)}\rho\mathbf b\,dV
++
+\int_{\partial\Omega(t)}
+\boldsymbol{\sigma}\mathbf n\,dS
+$$
+
+代入：
+
+$$
+\frac{d}{dt}
+\int_{\Omega(t)}\rho\mathbf u\,dV
+=
+\int_{\Omega(t)}\rho\mathbf b\,dV
++
+\int_{\partial\Omega(t)}
+\boldsymbol{\sigma}\mathbf n\,dS
+$$
+
+利用前面推导出的张量散度定理：
+
+$$
+\int_{\partial\Omega(t)}
+\boldsymbol{\sigma}\mathbf n\,dS
+=
+\int_{\Omega(t)}
+\nabla\cdot\boldsymbol{\sigma}\,dV
+$$
+
+于是：
+
+$$
+\boxed{
+\frac{d}{dt}
+\int_{\Omega(t)}\rho\mathbf u\,dV
+=
+\int_{\Omega(t)}
+\left(
+\nabla\cdot\boldsymbol{\sigma}+
+\rho\mathbf b
+\right)dV
+}
+$$
+
+#### 2. 处理左边的动量变化率
+
+这里涉及流体力学里另一个非常关键的概念：物质导数（Material Derivative）。
+
+对于速度场：
+
+$$
+\mathbf u=\mathbf u(\mathbf x,t)
+$$
+
+一个随流体运动的质点，其轨迹满足：
+
+$$
+\frac{d\mathbf x}{dt}=\mathbf u(\mathbf x(t),t)
+$$
+
+对该质点的速度求时间导数，根据链式法则：
+
+$$
+\frac{d}{dt}\mathbf u(\mathbf x(t),t)
+=
+\frac{\partial\mathbf u}{\partial t}
++
+\frac{dx_j}{dt}
+\frac{\partial\mathbf u}{\partial x_j}
+$$
+
+由于：
+
+$$
+\frac{dx_j}{dt}=u_j
+$$
+
+所以：
+
+$$
+\boxed{
+\frac{D\mathbf u}{Dt}
+=
+\frac{\partial\mathbf u}{\partial t}
++
+u_j\frac{\partial\mathbf u}{\partial x_j}
+}
+$$
+
+向量形式就是：
+
+$$
+\boxed{
+\frac{D\mathbf u}{Dt}
+=
+\frac{\partial\mathbf u}{\partial t}
++
+(\mathbf u\cdot\nabla)\mathbf u
+}
+$$
+
+其中：
+
+- $\partial_t\mathbf u$：局部加速度。
+- $(\mathbf u\cdot\nabla)\mathbf u$：对流加速度。
+
+两者之和才是随流体质点运动所观察到的真实加速度。
+
+根据雷诺输运定理和质量守恒，对物质体积有：
+
+$$
+\boxed{
+\frac{d}{dt}
+\int_{\Omega(t)}\rho\mathbf u\,dV
+=
+\int_{\Omega(t)}
+\rho\frac{D\mathbf u}{Dt}\,dV
+}
+$$
+
+把它代入之前的动量方程：
+
+$$
+\int_{\Omega(t)}
+\rho\frac{D\mathbf u}{Dt}\,dV
+=
+\int_{\Omega(t)}
+\left(
+\nabla\cdot\boldsymbol{\sigma}
++
+\rho\mathbf b
+\right)dV
+$$
+
+移到同一侧：
+
+$$
+\int_{\Omega(t)}
+\left[
+\rho\frac{D\mathbf u}{Dt}
+-
+\nabla\cdot\boldsymbol{\sigma}
+-
+\rho\mathbf b
+\right]dV=0
+$$
+
+由于物质体积可以任意选取，且被积函数足够连续，因此：
+
+$$
+\boxed{
+\rho\frac{D\mathbf u}{Dt}
+=
+\nabla\cdot\boldsymbol{\sigma}
++
+\rho\mathbf b
+}
+$$
+
+这就是柯西动量方程（Cauchy Momentum Equation）。
+
+写成展开形式：
+
+$$
+\boxed{
+\rho\left[
+\frac{\partial\mathbf u}{\partial t}
++
+(\mathbf u\cdot\nabla)\mathbf u
+\right]
+=
+\nabla\cdot\boldsymbol{\sigma}
++
+\rho\mathbf b
+}
+$$
+
+这个方程本身还不是某一种特定流体的 Navier–Stokes 方程。
+
+它是经典连续介质的局部线动量守恒方程。要得到熟悉的 Navier–Stokes 方程，还需要说明应力张量与流体速度、压力之间有什么关系。
+
+### 八、从柯西动量方程推导 Navier–Stokes 方程
+
+#### 1. 应力张量分为压力与黏性应力
+
+对于流体，通常将总应力张量写成：
+
+$$
+\boxed{
+\boldsymbol{\sigma}=-pI+\boldsymbol{\tau}
+}
+$$
+
+其中：
+
+$$
+I=
+\begin{pmatrix}
+1&0&0\\
+0&1&0\\
+0&0&1
+\end{pmatrix}
+$$
+
+为单位张量。
+
+$p$ 表示热力学压力（在通常的牛顿流体模型中），而 $\boldsymbol{\tau}$ 表示黏性应力张量。
+
+为什么压力项前面是负号？
+
+因为采用了拉伸为正、压缩为负的柯西应力符号约定。
+
+对于静止流体：
+
+$$
+\boldsymbol{\tau}=0
+$$
+
+因此：
+
+$$
+\boldsymbol{\sigma}=-pI
+$$
+
+任意截面上的牵引力为：
+
+$$
+\mathbf t=\boldsymbol{\sigma}\mathbf n=-p\mathbf n
+$$
+
+这意味着正压力产生与外法向相反的压缩作用。
+
+#### 2. 为什么压力会变成 $-\nabla p$？
+
+我们直接计算压力张量的散度。
+
+因为：
+
+$$
+-pI=
+\begin{pmatrix}
+-p&0&0\\
+0&-p&0\\
+0&0&-p
+\end{pmatrix}
+$$
+
+所以：
+
+$$
+\nabla\cdot(-pI)
+=
+\begin{pmatrix}
+-\frac{\partial p}{\partial x}\\[4pt]
+-\frac{\partial p}{\partial y}\\[4pt]
+-\frac{\partial p}{\partial z}
+\end{pmatrix}
+$$
+
+也就是：
+
+$$
+\boxed{\nabla\cdot(-pI)=-\nabla p}
+$$
+
+这解释了 Navier–Stokes 方程中的压力梯度项为什么带有负号。
+
+压力梯度指向压力增大最快的方向，而由压力形成的净力方向则相反。
+
+因此：
+
+$$
+\nabla\cdot\boldsymbol{\sigma}
+=
+-\nabla p+\nabla\cdot\boldsymbol{\tau}
+$$
+
+柯西动量方程变成：
+
+$$
+\boxed{
+\rho\frac{D\mathbf u}{Dt}
+=
+-\nabla p
++
+\nabla\cdot\boldsymbol{\tau}
++
+\rho\mathbf b
+}
+$$
+
+#### 3. 牛顿流体的黏性本构关系
+
+对于各向同性的牛顿流体，黏性应力与速度梯度的对称部分有关。
+
+定义应变率张量：
+
+$$
+\boxed{
+D_{ij}
+=
+\frac12
+\left(
+\frac{\partial u_i}{\partial x_j}
++
+\frac{\partial u_j}{\partial x_i}
+\right)
+}
+$$
+
+它的矩阵形式为：
+
+$$
+D=\frac12\left(L+L^{\mathsf T}\right)
+$$
+
+其中：
+
+$$
+L_{ij}=\frac{\partial u_i}{\partial x_j}
+$$
+
+对一般可压缩各向同性牛顿流体，可以写成：
+
+$$
+\boxed{
+\tau_{ij}
+=
+2\mu D_{ij}
++
+\lambda(\nabla\cdot\mathbf u)\delta_{ij}
+}
+$$
+
+这里：
+
+- $\mu$ 是动力黏度（剪切黏度）。
+- $\lambda$ 是第二黏性系数。
+- $\delta_{ij}$ 是克罗内克符号。
+
+如果是不可压缩流体：
+
+$$
+\nabla\cdot\mathbf u=0
+$$
+
+则：
+
+$$
+\boxed{\boldsymbol{\tau}=2\mu D}
+$$
+
+也就是说：
+
+$$
+\boldsymbol{\tau}
+=
+\mu
+\left[
+\nabla\mathbf u+
+(\nabla\mathbf u)^{\mathsf T}
+\right]
+$$
+
+这个式子有非常重要的物理含义：
+
+牛顿流体的黏性应力与流体微团的瞬时变形率直接相关，而不是与流体整体速度的大小直接相关。
+
+例如，一整团水以相同速度匀速平移，即使速度很大：
+
+$$
+\nabla\mathbf u=0
+$$
+
+其黏性应力仍然为零。
+
+#### 4. 为什么黏性应力散度会成为速度的 Laplace 算子？
+
+现在假设：
+
+$$
+\mu=\text{常数}
+$$
+
+并且：
+
+$$
+\nabla\cdot\mathbf u=0
+$$
+
+计算：
+
+$$
+(\nabla\cdot\boldsymbol{\tau})_i
+=
+\partial_j\tau_{ij}
+$$
+
+代入：
+
+$$
+\tau_{ij}
+=
+\mu\left(
+\partial_j u_i+\partial_i u_j
+\right)
+$$
+
+得到：
+
+$$
+\partial_j\tau_{ij}
+=
+\mu\partial_j
+\left(
+\partial_j u_i+\partial_i u_j
+\right)
+$$
+
+展开：
+
+$$
+=
+\mu
+\left(
+\partial_j\partial_j u_i
++
+\partial_j\partial_i u_j
+\right)
+$$
+
+由于速度场足够光滑，可交换混合偏导数：
+
+$$
+\partial_j\partial_i u_j
+=
+\partial_i(\partial_j u_j)
+$$
+
+而：
+
+$$
+\partial_j u_j=\nabla\cdot\mathbf u=0
+$$
+
+因此：
+
+$$
+\partial_j\partial_i u_j=0
+$$
+
+剩下：
+
+$$
+\partial_j\tau_{ij}
+=
+\mu\partial_j\partial_j u_i
+$$
+
+根据 Laplace 算子的定义：
+
+$$
+\Delta u_i
+=
+\partial_j\partial_j u_i
+$$
+
+所以：
+
+$$
+\boxed{
+\nabla\cdot\boldsymbol{\tau}
+=
+\mu\Delta\mathbf u
+}
+$$
+
+请注意，这个化简依赖不可压缩、常黏度等假设；对于空间变黏度或一般可压缩流动，不能直接把黏性项写成 $\mu\Delta\mathbf u$。
+
+#### 5. 最终得到 Navier–Stokes 方程
+
+代回柯西动量方程：
+
+$$
+\rho\frac{D\mathbf u}{Dt}
+=
+-\nabla p+\mu\Delta\mathbf u+\rho\mathbf b
+$$
+
+展开物质导数：
+
+$$
+\boxed{
+\rho\left(
+\frac{\partial\mathbf u}{\partial t}
++
+(\mathbf u\cdot\nabla)\mathbf u
+\right)
+=
+-\nabla p
++
+\mu\Delta\mathbf u
++
+\rho\mathbf b
+}
+$$
+
+再加上不可压缩条件：
+
+$$
+\boxed{\nabla\cdot\mathbf u=0}
+$$
+
+就得到常见的不可压缩牛顿流体 Navier–Stokes 方程组。
+
+Navier–Stokes 方程每一项的物理含义
+
+我们用一个非常简单的案例，将前面所有重要概念连起来。
+
+考虑两块相距 $H$ 的无限大平板。
+
+下平板静止，上平板以恒定速度 $U$ 沿 $x$ 方向运动。
+
+$$
+\mathbf u=
+\begin{pmatrix}
+u(y)\\0\\0
+\end{pmatrix}
+$$
+
+其中：
+
+$$
+u(y)=\frac{U}{H}y
+$$
+
+#### 第一步：计算速度梯度张量
+
+$$
+L=\nabla\mathbf u
+$$
+
+得到：
+
+$$
+\boxed{
+L=
+\begin{pmatrix}
+0&U/H&0\\
+0&0&0\\
+0&0&0
+\end{pmatrix}
+}
+$$
+
+#### 第二步：计算应变率张量
+
+$$
+D=\frac12(L+L^{\mathsf T})
+$$
+
+因此：
+
+$$
+\boxed{
+D=
+\begin{pmatrix}
+0&U/(2H)&0\\
+U/(2H)&0&0\\
+0&0&0
+\end{pmatrix}
+}
+$$
+
+#### 第三步：计算黏性应力张量
+
+对于不可压缩牛顿流体：
+
+$$
+\boldsymbol{\tau}=2\mu D
+$$
+
+所以：
+
+$$
+\boxed{
+\boldsymbol{\tau}
+=
+\begin{pmatrix}
+0&\mu U/H&0\\
+\mu U/H&0&0\\
+0&0&0
+\end{pmatrix}
+}
+$$
+
+于是：
+
+$$
+\tau_{xy}=\tau_{yx}=\mu\frac{U}{H}
+$$
+
+这就是熟悉的牛顿黏性定律：
+
+$$
+\boxed{
+\tau=\mu\frac{du}{dy}
+}
+$$
+
+#### 第四步：为什么应力不为零，但应力散度可以等于零？
+
+由于 $U,H,\mu$ 都是常数：
+
+$$
+\boldsymbol{\tau}
+=
+\text{常数矩阵}
+$$
+
+因此：
+
+$$
+\boxed{\nabla\cdot\boldsymbol{\tau}=0}
+$$
+
+这里有个非常容易混淆的地方：
+
+- 流体内部确实存在非零剪应力。
+- 但是，由于剪应力在空间上不变，相对两个面上的剪切力相互抵消。
+- 所以流体内部一个微元的净黏性力可以是零。
+
+在上下平板处，流体仍然会对平板施加非零切向作用力。
+
+因此：
+
+$$
+\boxed{
+\text{应力不为零}
+\quad\not\Rightarrow\quad
+\text{应力散度不为零}
+}
+$$
+
+这恰好说明，应力张量与应力张量的散度在物理意义上是两个不同概念。
+
+### 十、从数学上再区分一次：应力张量、矩阵和散度
+
+把三个数学对象放在一起：
+
+| 数学对象 | 公式 | 物理意义 |
+| --- | --- | --- |
+| 应力张量 | $\boldsymbol{\sigma}$ | 描述不同方向截面的单位面积受力 |
+| 牵引力向量 | $\mathbf t=\boldsymbol{\sigma}\mathbf n$ | 特定截面上的单位面积受力 |
+| 应力散度 | $\nabla\cdot\boldsymbol{\sigma}$ | 局部单位体积的净表面力 |
+
+它们的数学映射关系是：
+
+$$
+\underbrace{\boldsymbol{\sigma}}_{\text{二阶张量}}
+\quad
+\overset{\times\mathbf n}{\longrightarrow}
+\quad
+\underbrace{\mathbf t}_{\text{向量}}
+$$
+
+以及：
+
+$$
+\underbrace{\boldsymbol{\sigma}}_{\text{二阶张量}}
+\quad
+\overset{\nabla\cdot}{\longrightarrow}
+\quad
+\underbrace{\mathbf f_{\mathrm{surface}}}_{\text{力密度向量}}
+$$
+
+第一个运算是张量作用于一个方向向量。
+
+第二个运算是对张量的空间分量求导并缩并指标。
+
+虽然两者的结果都是向量，但对应的物理意义和单位不同：
+
+$$
+[\mathbf t]=\mathrm{N/m^2}
+$$
+
+$$
+[\nabla\cdot\boldsymbol{\sigma}]=\mathrm{N/m^3}
+$$
+
+一个是单位面积受力，一个是单位体积净表面力。
+
+### 十一、整套推导的知识结构
+
+牛顿第二定律
+
+$\mathbf F=m\mathbf a$
+
+识别体积力、表面力
+
+柯西四面体论证
+
+$\mathbf t(\mathbf n)=\boldsymbol{\sigma}\mathbf n$
+
+对全部边界面积分
+
+高斯散度定理
+
+$\displaystyle\int_{\partial\Omega}\boldsymbol{\sigma}\mathbf n\,dS=\int_\Omega\nabla\cdot\boldsymbol{\sigma}\,dV$
+
+动量守恒、雷诺输运定理
+
+柯西动量方程
+
+$\displaystyle\rho\frac{D\mathbf u}{Dt}=\nabla\cdot\boldsymbol{\sigma}+\rho\mathbf b$
+
+牛顿流体本构关系、不可压缩、常黏度
+
+Navier–Stokes 方程
+
+$$
+\rho\left(\partial_t\mathbf u+(\mathbf u\cdot\nabla)\mathbf u\right)=-\nabla p+\mu\Delta\mathbf u+\rho\mathbf b
+$$
+
+$\nabla\cdot\mathbf u=0$
+
+#### 十二、检验你是否真正理解的三个问题
+
+1. 为什么一个二阶应力张量能够决定任意截面的受力？
+
+因为每个截面上的应力都相同因为牵引力与截面法向量之间满足线性关系因为任意截面的面积相同2. 某流场的应力张量处处为同一个非零常数矩阵，其应力散度是多少？
+
+非零，因为应力不为零为零，因为所有应力分量的空间导数为零无法判断，因为不知道截面法向量3. 在常黏度、不可压缩牛顿流体中，黏性应力的散度化简为什么？
+
+μΔu−∇pμu对于你后续研究 PDE、Navier–Stokes 和流体涡度方程，建议尤其掌握以下两个公式：
+
+$$
+\boxed{\mathbf t(\mathbf n)=\boldsymbol{\sigma}\mathbf n}
+\qquad
+\boxed{\nabla\cdot\boldsymbol{\sigma}=\text{单位体积净表面力}}
+$$
+
+第一个公式解释了张量为什么能通过矩阵表示，以及矩阵乘法的物理意义。
+
+第二个公式解释了为什么连续介质力学中的表面作用力最终可以转化为 PDE 中的微分算子。
+
+掌握这两个关系，再去研究速度梯度张量、黏性项、涡度方程和有限体积法，数学结构就会清楚得多。
+
+## 问题 4：基底变换、协变与逆变
+
+> **我的问题（原文）**
+>
+> 请从线性代数的基底变换开始，逐步推导矩阵与二阶张量的坐标变换关系，重点区分 A'=Q^TAQ、逆变与协变指标，并结合流体应力张量解释。
+
+**回答**
+
+### 从线性代数到张量分析：基底变换、协变与逆变，以及流体应力张量
+
+这次我们从线性代数的基础开始，逐步推导二阶张量的坐标变换规律。
+
+整个过程要解决四个核心问题：
+
+1. 为什么同一个向量换一组基底后，坐标会发生变化？
+2. 为什么有些量使用上指标 $v^i$，有些量使用下指标 $\omega_i$？
+3. 为什么会出现 $A'=Q^{\mathsf T}AQ$，它和 $A'=Q^{-1}AQ$ 有什么关系？
+4. 为什么流体力学中的应力张量可以表示为一个矩阵，并且在旋转坐标系后仍然描述同一个物理对象？
+
+先给出最核心的一条结论：
+
+张量不是某一个固定的矩阵，而是一个不依赖基底的数学对象。矩阵只是张量在选定基底下的分量表示。
+
+在直角正交坐标系中，不同类型二阶张量的变换公式经常看起来完全一样；但一旦进入非正交基底或曲线坐标系，它们的区别就会显现出来。
+
+### 一、线性代数基础：什么是基底？
+
+#### 1. 一个向量与它的坐标不是同一件事
+
+考虑二维欧氏空间：
+
+$$
+V=\mathbb R^2
+$$
+
+选择标准正交基底：
+
+$$
+\mathbf e_1=
+\begin{pmatrix}1\\0\end{pmatrix},
+\qquad
+\mathbf e_2=
+\begin{pmatrix}0\\1\end{pmatrix}
+$$
+
+任意向量 $\mathbf v$ 都可以表示为：
+
+$$
+\boxed{
+\mathbf v=v^1\mathbf e_1+v^2\mathbf e_2
+}
+$$
+
+例如：
+
+$$
+\mathbf v=3\mathbf e_1+2\mathbf e_2
+$$
+
+对应的坐标列向量为：
+
+$$
+[\mathbf v]_e=
+\begin{pmatrix}3\\2\end{pmatrix}
+$$
+
+这里需要区分：
+
+- $\mathbf v$ 是几何向量。
+- $\mathbf e_1,\mathbf e_2$ 是用于表示向量的基底。
+- $v^1,v^2$ 是这个向量在该基底下的坐标。
+
+也就是说：
+
+$$
+\text{几何向量}=\text{基向量}\times\text{坐标分量的线性组合}
+$$
+
+坐标可以改变，而几何向量不一定改变。
+
+#### 2. 更换基底后会发生什么？
+
+现在将坐标基底逆时针旋转一个角度 $\theta$。
+
+新基底为：
+
+$$
+\mathbf e'_1
+=
+\cos\theta\,\mathbf e_1+
+\sin\theta\,\mathbf e_2
+$$
+
+$$
+\mathbf e'_2
+=
+-\sin\theta\,\mathbf e_1+
+\cos\theta\,\mathbf e_2
+$$
+
+把两组基向量分别排列成矩阵：
+
+$$
+E=
+\begin{pmatrix}
+|&|\\
+\mathbf e_1&\mathbf e_2\\
+|&|
+\end{pmatrix}
+$$
+
+$$
+E'=
+\begin{pmatrix}
+|&|\\
+\mathbf e'_1&\mathbf e'_2\\
+|&|
+\end{pmatrix}
+$$
+
+定义旋转矩阵：
+
+$$
+\boxed{
+Q=
+\begin{pmatrix}
+\cos\theta&-\sin\theta\\
+\sin\theta&\cos\theta
+\end{pmatrix}
+}
+$$
+
+因此：
+
+$$
+\boxed{E'=EQ}
+$$
+
+注意这个约定：矩阵 $Q$ 的各列，是新基向量在旧基底中的坐标。
+
+<TensorExplorer mode="basis" vector={[3, 2]} client:visible />
+
+#### 3. 严格推导坐标为什么要乘 $Q^{-1}$
+同一个向量既可以用旧基底表示，也可以用新基底表示。
+因此：
+
+$$
+\mathbf v=E[\mathbf v]_e
+$$
+
+以及：
+
+$$
+\mathbf v=E'[\mathbf v]_{e'}
+$$
+
+代入：
+
+$$
+E'=EQ
+$$
+
+得到：
+
+$$
+E[\mathbf v]_e=EQ[\mathbf v]_{e'}
+$$
+
+因为 $E$ 可逆：
+
+$$
+[\mathbf v]_e=Q[\mathbf v]_{e'}
+$$
+
+所以：
+
+$$
+\boxed{
+[\mathbf v]_{e'}=Q^{-1}[\mathbf v]_e
+}
+$$
+
+由于这里是正交旋转：
+
+$$
+Q^{-1}=Q^{\mathsf T}
+$$
+
+所以：
+
+$$
+\boxed{
+[\mathbf v]_{e'}=Q^{\mathsf T}[\mathbf v]_e
+}
+$$
+
+我们得到了一个重要结果：
+
+$$
+\boxed{
+\begin{aligned}
+\text{基底变换：}&\quad E'=EQ\\
+\text{坐标变换：}&\quad v'=Q^{-1}v
+\end{aligned}
+}
+$$
+
+基底向一个方向变化，坐标就按逆矩阵变化。
+原因是两者必须配合，才能表示同一个物理向量。
+这便是逆变思想的起点。
+### 二、逆变与协变究竟是什么意思？
+这是张量分析中最容易混淆的内容。
+需要先强调：
+逆变、协变不是指向量朝哪个方向运动，也不是判断一个物理量是否“相反”的概念，而是描述它的分量如何随基底变化。
+#### 1. 逆变向量：上指标 $v^i$
+考虑一般基底变换：
+
+$$
+\boxed{\mathbf e'_i=\mathbf e_j S^j_{\ i}}
+$$
+
+这里 $S$ 是任意可逆矩阵，不要求是正交矩阵。
+同一个向量满足：
+
+$$
+\mathbf v=v^i\mathbf e_i=v'^i\mathbf e'_i
+$$
+
+代入新基底：
+
+$$
+v^j\mathbf e_j=v'^iS^j_{\ i}\mathbf e_j
+$$
+
+比较基底系数：
+
+$$
+v^j=S^j_{\ i}v'^i
+$$
+
+因此：
+
+$$
+\boxed{
+v'^i=(S^{-1})^i_{\ j}v^j
+}
+$$
+
+这种按基底变换矩阵的逆矩阵进行变化的分量，称为逆变分量。
+通常写作：
+
+$$
+v^i
+$$
+
+使用上指标。
+#### 2. 协变向量：下指标 $\omega_i$
+现在考虑一个线性函数：
+
+$$
+\omega:V\to\mathbb R
+$$
+
+它可以接受一个向量，并输出一个实数。
+这种对象称为协向量（Covector），属于对偶空间 $V^*$。
+设：
+
+$$
+\omega(\mathbf v)=\omega_i v^i
+$$
+
+当基底变化时，$\omega(\mathbf v)$ 这个实数不能因为更换坐标系而变化。
+因此：
+
+$$
+\omega_i v^i=\omega'_i v'^i
+$$
+
+由于：
+
+$$
+v'=S^{-1}v
+$$
+
+使用列向量表示：
+
+$$
+\omega(v)=\omega^{\mathsf T}v
+$$
+
+必须有：
+
+$$
+\omega'^{\mathsf T}S^{-1}v=\omega^{\mathsf T}v
+$$
+
+对任意 $v$ 成立，所以：
+
+$$
+\omega'^{\mathsf T}=\omega^{\mathsf T}S
+$$
+
+转置：
+
+$$
+\boxed{
+\omega'=S^{\mathsf T}\omega
+}
+$$
+
+指标形式为：
+
+$$
+\boxed{
+\omega'_i=S^j_{\ i}\omega_j
+}
+$$
+
+这种分量称为协变分量，通常使用下指标：
+
+$$
+\omega_i
+$$
+
+#### 3. 逆变与协变的对比
+| 比较 | 逆变向量 | 协向量 |
+|---|---|---|
+| 所属空间 | $V$ | $V^*$ |
+| 分量符号 | $v^i$ | $\omega_i$ |
+| 基底变换 $E'=ES$ | $v'=S^{-1}v$ | $\omega'=S^{\mathsf T}\omega$ |
+| 典型物理对象 | 位移、速度 | 函数微分 $df$ |
+| 自然配对 | $\omega_i v^i$ 是标量 | $\omega'_i v'^i=\omega_i v^i$ |
+最重要的性质是：
+
+$$
+\boxed{
+\omega'_i v'^i=\omega_i v^i
+}
+$$
+
+这个关系叫做自然配对的不变性。
+#### 4. 一个简单例子：基底伸缩
+设：
+
+$$
+\mathbf e'_1=2\mathbf e_1,\qquad
+\mathbf e'_2=\mathbf e_2
+$$
+
+那么：
+
+$$
+S=
+\begin{pmatrix}
+2&0\\0&1
+\end{pmatrix}
+$$
+
+假设某个向量旧坐标为：
+
+$$
+v=
+\begin{pmatrix}4\\3\end{pmatrix}
+$$
+
+新坐标为：
+
+$$
+v'=S^{-1}v=
+\begin{pmatrix}
+1/2&0\\0&1
+\end{pmatrix}
+\begin{pmatrix}4\\3\end{pmatrix}
+=
+\begin{pmatrix}2\\3\end{pmatrix}
+$$
+
+第一根基向量长度扩大为两倍，因此表示同一个向量只需要原来一半的坐标系数。
+而如果协向量的旧分量为：
+
+$$
+\omega=
+\begin{pmatrix}5\\1\end{pmatrix}
+$$
+
+则新分量为：
+
+$$
+\omega'=S^{\mathsf T}\omega
+=
+\begin{pmatrix}10\\1\end{pmatrix}
+$$
+
+检验自然配对：
+
+$$
+\begin{gathered}
+\omega_i v^i=5(4)+1(3)=23\\
+\omega'_i v'^i=10(2)+1(3)=23
+\end{gathered}
+$$
+
+完全相同。
+这说明逆变与协变虽然以不同方式变换，但能够保证几何量和物理量不受坐标选择影响。
+### 三、为什么在直角坐标系中很难看出协变与逆变的区别？
+前面有两个不同的变换规律：
+
+$$
+\begin{gathered}
+v'=S^{-1}v\\
+\omega'=S^{\mathsf T}\omega
+\end{gathered}
+$$
+
+但如果采用正交旋转矩阵 $Q$，由于：
+
+$$
+Q^{-1}=Q^{\mathsf T}
+$$
+
+便有：
+
+$$
+\begin{gathered}
+\boxed{
+v'=Q^{\mathsf T}v
+}\\
+\boxed{
+\omega'=Q^{\mathsf T}\omega
+}
+\end{gathered}
+$$
+
+你会发现：虽然向量和协向量是不同类型的数学对象，但它们的分量在这种特殊情况下采用相同的变换公式。
+这正是许多流体力学教材没有特别强调上下指标区别的原因。
+因为经典流体力学经常使用欧氏空间中的笛卡尔正交坐标。
+然而，在一般曲线坐标、非正交基底或微分几何中，两者不能直接混为一谈。
+#### 1. 引入度量张量 $g_{ij}$
+在欧氏空间中，两个向量可以做内积：
+
+$$
+\mathbf u\cdot\mathbf v
+$$
+
+如果基底不正交，不能简单把坐标分量对应相乘后相加。
+设：
+
+$$
+\mathbf u=u^i\mathbf e_i,\qquad
+\mathbf v=v^j\mathbf e_j
+$$
+
+则：
+
+$$
+\begin{aligned}
+\mathbf u\cdot\mathbf v
+&=(u^i\mathbf e_i)\cdot(v^j\mathbf e_j)\\
+&=u^iv^j(\mathbf e_i\cdot\mathbf e_j)
+\end{aligned}
+$$
+
+定义：
+
+$$
+\boxed{
+g_{ij}=\mathbf e_i\cdot\mathbf e_j
+}
+$$
+
+于是：
+
+$$
+\boxed{
+\mathbf u\cdot\mathbf v=g_{ij}u^iv^j
+}
+$$
+
+$g_{ij}$ 就是度量张量（Metric Tensor）的分量。
+它本质上是一个二阶协变张量。
+在矩阵形式下：
+
+$$
+\boxed{
+\mathbf u\cdot\mathbf v=u^{\mathsf T}Gv
+}
+$$
+
+其中：
+
+$$
+G=[g_{ij}]
+$$
+
+对于正交归一基底：
+
+$$
+G=I
+$$
+
+于是熟悉的公式：
+
+$$
+\mathbf u\cdot\mathbf v=u^{\mathsf T}v
+$$
+
+只是一般公式的特例。
+#### 2. 度量张量如何联系上下指标？
+设：
+
+$$
+v^i
+$$
+
+是一个向量的逆变分量。
+使用度量张量，可以定义对应的协变分量：
+
+$$
+\boxed{
+v_i=g_{ij}v^j
+}
+$$
+
+这称为降低指标（Lowering an Index）。
+反过来，使用逆度量：
+
+$$
+[g^{ij}]=G^{-1}
+$$
+
+可以得到：
+
+$$
+\boxed{
+v^i=g^{ij}v_j
+}
+$$
+
+这称为升高指标（Raising an Index）。
+特别要注意：
+
+$$
+v_i\neq v^i
+$$
+
+通常并不相等。
+只有在标准正交归一基底下，由于 $g_{ij}=\delta_{ij}$，相应分量的数值才一致。
+#### 3. 为什么梯度经常涉及下指标？
+设标量场：
+
+$$
+f=f(x^1,x^2,x^3)
+$$
+
+它的微分是：
+
+$$
+\boxed{
+df=\frac{\partial f}{\partial x^i}dx^i
+}
+$$
+
+这里：
+
+$$
+\partial_i f=\frac{\partial f}{\partial x^i}
+$$
+
+是协向量 $df$ 的分量。
+但我们在流体力学中经常使用梯度向量：
+
+$$
+\nabla f
+$$
+
+严格来说，$df$ 和 $\nabla f$ 通过度量联系：
+
+$$
+\boxed{
+(\nabla f)^i=g^{ij}\partial_j f
+}
+$$
+
+它们并不是在任意基底下都具有相同分量的对象。
+这个区分在柱坐标、球坐标以及曲线坐标中非常重要。
+例如，在二维极坐标 $(r,\theta)$ 中：
+
+$$
+df=f_r\,dr+f_\theta\,d\theta
+$$
+
+而梯度向量在坐标基 $(\partial_r,\partial_\theta)$ 下是：
+
+$$
+\boxed{
+\nabla f
+=
+\frac{\partial f}{\partial r}\partial_r
++
+\frac{1}{r^2}
+\frac{\partial f}{\partial\theta}\partial_\theta
+}
+$$
+
+因为极坐标的度量为：
+
+$$
+G=
+\begin{pmatrix}
+1&0\\
+0&r^2
+\end{pmatrix}
+$$
+
+如果改用单位正交基底 $(\mathbf e_r,\mathbf e_\theta)$，则写成更熟悉的形式：
+
+$$
+\nabla f
+=
+\frac{\partial f}{\partial r}\mathbf e_r
++
+\frac1r\frac{\partial f}{\partial\theta}\mathbf e_\theta
+$$
+
+两种公式并不矛盾，它们使用的基底不同。
+### 四、二阶张量的三种类型及其变换规律
+现在终于进入矩阵与二阶张量的核心关系。
+在张量分析中，二阶张量并不只有一种类型。
+最常见的是：
+
+$$
+\boxed{
+T^{ij},\qquad T^i_{\ j},\qquad T_{ij}
+}
+$$
+
+它们分别属于：
+
+$$
+(2,0),\qquad(1,1),\qquad(0,2)
+$$
+
+虽然都可以排列为 $n\times n$ 的矩阵，但它们的基底变换公式一般不同。
+仍然设：
+
+$$
+E'=ES
+$$
+
+#### 1. 二阶逆变张量 $(2,0)$
+考虑：
+
+$$
+T=T^{ij}\mathbf e_i\otimes\mathbf e_j
+$$
+
+这里的 $\otimes$ 是张量积。
+因为：
+
+$$
+\mathbf e'_i=\mathbf e_k S^k_{\ i}
+$$
+
+所以：
+
+$$
+\mathbf e_i
+=
+\mathbf e'_k(S^{-1})^k_{\ i}
+$$
+
+代入：
+
+$$
+T
+=
+T^{ij}
+(S^{-1})^k_{\ i}
+(S^{-1})^\ell_{\ j}
+\mathbf e'_k\otimes\mathbf e'_\ell
+$$
+
+比较新基底的系数：
+
+$$
+\boxed{
+T'^{k\ell}
+=
+(S^{-1})^k_{\ i}
+(S^{-1})^\ell_{\ j}
+T^{ij}
+}
+$$
+
+用矩阵形式表示：
+
+$$
+\boxed{
+T'=S^{-1}TS^{-\mathsf T}
+}
+$$
+
+这里 $S^{-\mathsf T}$ 表示 $(S^{-1})^{\mathsf T}$。
+#### 2. 二阶协变张量 $(0,2)$
+设一个双线性型：
+
+$$
+B:V\times V\to\mathbb R
+$$
+
+在旧基底中：
+
+$$
+B_{ij}=B(\mathbf e_i,\mathbf e_j)
+$$
+
+新基底中：
+
+$$
+B'_{ij}=B(\mathbf e'_i,\mathbf e'_j)
+$$
+
+代入：
+
+$$
+\mathbf e'_i=\mathbf e_kS^k_{\ i}
+$$
+
+于是：
+
+$$
+\begin{aligned}
+B'_{ij}
+&=B(S^k_{\ i}\mathbf e_k,S^\ell_{\ j}\mathbf e_\ell)\\
+&=S^k_{\ i}S^\ell_{\ j}B(\mathbf e_k,\mathbf e_\ell)
+\end{aligned}
+$$
+
+因为 $B$ 对两个输入都具有线性性质。
+所以：
+
+$$
+\boxed{
+B'_{ij}=S^k_{\ i}S^\ell_{\ j}B_{k\ell}
+}
+$$
+
+写成矩阵：
+
+$$
+\boxed{
+B'=S^{\mathsf T}BS
+}
+$$
+
+注意，这里出现了 $S^{\mathsf T}$，而不是 $S^{-1}$。
+#### 3. 混合型二阶张量 $(1,1)$
+考虑一个线性算子：
+
+$$
+A:V\to V
+$$
+
+在旧基底中：
+
+$$
+w=Av
+$$
+
+换基后：
+
+$$
+\begin{gathered}
+v'=S^{-1}v\\
+w'=S^{-1}w
+\end{gathered}
+$$
+
+所以：
+
+$$
+w'=S^{-1}Av
+$$
+
+因为：
+
+$$
+v=Sv'
+$$
+
+故：
+
+$$
+w'=S^{-1}ASv'
+$$
+
+与新坐标下的定义：
+
+$$
+w'=A'v'
+$$
+
+比较，得到：
+
+$$
+\boxed{
+A'=S^{-1}AS
+}
+$$
+
+这是线性代数中熟悉的相似变换（Similarity Transformation）。
+#### 4. 三种二阶张量公式对照
+| 类型 | 指标形式 | 矩阵变换公式 |
+| --- | --- | --- |
+| 二阶逆变 $(2,0)$ | $T^{ij}$ | $T'=S^{-1}TS^{-\mathsf T}$ |
+| 二阶协变 $(0,2)$ | $B_{ij}$ | $B'=S^{\mathsf T}BS$ |
+| 混合型 $(1,1)$ | $A^i_{\ j}$ | $A'=S^{-1}AS$ |
+这是整篇推导最值得保存的一张表。
+它说明：同样是 $3\times3$ 矩阵，代表哪种张量，会直接决定它怎样变换。
+### 五、重点：为什么会出现 $A'=Q^{\mathsf T}AQ$？
+设 $Q$ 是正交旋转矩阵：
+
+$$
+Q^{-1}=Q^{\mathsf T}
+$$
+
+根据刚才的结果：
+对于混合型张量：
+
+$$
+A'=Q^{-1}AQ
+$$
+
+因此：
+
+$$
+\boxed{A'=Q^{\mathsf T}AQ}
+$$
+
+对于协变型张量：
+
+$$
+B'=Q^{\mathsf T}BQ
+$$
+
+对于逆变型张量：
+
+$$
+T'=Q^{-1}TQ^{-\mathsf T}
+$$
+
+因为：
+
+$$
+Q^{-1}=Q^{\mathsf T},\qquad
+Q^{-\mathsf T}=Q
+$$
+
+所以：
+
+$$
+\boxed{T'=Q^{\mathsf T}TQ}
+$$
+
+由此出现一个重要的结果：
+
+$$
+\boxed{
+\text{在正交基底旋转下，三类二阶张量均可写成 }
+A'=Q^{\mathsf T}AQ
+}
+$$
+
+这里虽然矩阵形式相同，但其数学类型并没有变成同一种张量。
+正交旋转掩盖了协变和逆变的差别。
+另外还要区分两个常见公式：
+
+$$
+A'=Q^{\mathsf T}AQ
+$$
+
+与：
+
+$$
+A'=QAQ^{\mathsf T}
+$$
+
+二者都可能正确，区别在于如何定义 $Q$。
+在本文的约定中：
+
+$$
+E'=EQ
+$$
+
+即 $Q$ 的列为新基向量在旧基底下的坐标，那么：
+
+$$
+\boxed{A'=Q^{\mathsf T}AQ}
+$$
+
+如果 $Q$ 定义为从旧坐标分量到新坐标分量的旋转矩阵，或者研究的是主动旋转整个物理对象，则可能写成：
+
+$$
+QAQ^{\mathsf T}
+$$
+
+因此，看到旋转公式时，一定要先检查矩阵到底表示基底的变化还是物理对象的主动旋转。
+### 六、计算例子：为什么非正交变换能暴露三种张量的区别？
+我们用实际数字来验证前面的理论。
+#### 1. 先看正交旋转
+设：
+
+$$
+A=
+\begin{pmatrix}
+2&0\\
+0&1
+\end{pmatrix}
+$$
+
+将基底逆时针旋转 $45^\circ$：
+
+$$
+Q=\frac1{\sqrt2}
+\begin{pmatrix}
+1&-1\\
+1&1
+\end{pmatrix}
+$$
+
+那么：
+
+$$
+Q^{\mathsf T}=
+\frac1{\sqrt2}
+\begin{pmatrix}
+1&1\\
+-1&1
+\end{pmatrix}
+$$
+
+计算：
+
+$$
+A'=Q^{\mathsf T}AQ
+$$
+
+先计算：
+
+$$
+AQ=\frac1{\sqrt2}
+\begin{pmatrix}
+2&-2\\
+1&1
+\end{pmatrix}
+$$
+
+再左乘 $Q^{\mathsf T}$：
+
+$$
+A'=\frac12
+\begin{pmatrix}
+1&1\\
+-1&1
+\end{pmatrix}
+\begin{pmatrix}
+2&-2\\
+1&1
+\end{pmatrix}
+$$
+
+最终：
+
+$$
+\boxed{
+A'=
+\begin{pmatrix}
+1.5&-0.5\\
+-0.5&1.5
+\end{pmatrix}
+}
+$$
+
+这里的矩阵数值虽然变化，但其所表示的几何对象没有改变。
+例如：
+
+$$
+\begin{gathered}
+\operatorname{tr}(A)=3\\
+\operatorname{tr}(A')=3
+\end{gathered}
+$$
+
+两个矩阵的特征值同样都是：
+
+$$
+\lambda_1=2,\qquad\lambda_2=1
+$$
+
+对于这个正交基底变换而言，迹、行列式、特征值都保持不变。
+#### 2. 再看非正交归一的基底
+这里选择一个更简单的非正交归一变换：
+
+$$
+S=
+\begin{pmatrix}
+2&0\\
+0&1
+\end{pmatrix}
+$$
+
+相当于将第一根基向量拉长为原来的两倍，第二根不变。
+于是：
+
+$$
+S^{-1}=
+\begin{pmatrix}
+1/2&0\\
+0&1
+\end{pmatrix}
+$$
+
+对于同一个旧坐标分量数组：
+
+$$
+M=
+\begin{pmatrix}
+2&0\\
+0&1
+\end{pmatrix}
+$$
+
+我们分别考虑它作为三种不同类型张量的表示。
+同一个数表，在不同张量类型下的变换
+混合型张量 $(1,1)$
+
+$$
+S^{-1}MS=\begin{pmatrix}2&0\\0&1\end{pmatrix}
+$$
+
+协变型张量 $(0,2)$
+
+$$
+S^{\mathsf T}MS=\begin{pmatrix}8&0\\0&1\end{pmatrix}
+$$
+
+逆变型张量 $(2,0)$
+
+$$
+S^{-1}MS^{-\mathsf T}=\begin{pmatrix}0.5&0\\0&1\end{pmatrix}
+$$
+
+观察结果：
+
+$$
+\begin{pmatrix}2&0\\0&1\end{pmatrix},
+\quad
+\begin{pmatrix}8&0\\0&1\end{pmatrix},
+\quad
+\begin{pmatrix}0.5&0\\0&1\end{pmatrix}
+$$
+
+三个结果完全不同！
+原因不是计算方法不一致，而是这三个旧矩阵虽然数字相同，却分别表示了不同类型的数学对象。
+这就证明了一个核心观点：
+> 判断一个矩阵如何随坐标变化，不能只看它有几行几列，而必须知道它所代表的张量类型。
+另外特别注意：对于一般非正交基底变换，协变张量的分量矩阵通常不再通过相似变换关联，因此其普通矩阵特征值和迹不一定保持不变。要讨论对应的几何不变量，需要正确使用度量来升降指标。
+### 七、将这些理论应用于流体力学的柯西应力张量
+现在我们已经了解：
+- 基底变换。
+- 逆变和协变。
+- 二阶张量的三种类型。
+- 正交旋转下的矩阵变换。
+接下来将其应用于流体应力。
+#### 1. 为什么应力张量可以视为线性映射？
+我们已经推导过柯西应力定理：
+
+$$
+\boxed{
+\mathbf t(\mathbf n)=\boldsymbol{\sigma}\mathbf n
+}
+$$
+
+其中：
+
+$$
+\mathbf n=
+\begin{pmatrix}
+n_x\\n_y\\n_z
+\end{pmatrix}
+$$
+
+是截面的单位外法向量。
+而：
+
+$$
+\mathbf t=
+\begin{pmatrix}
+t_x\\t_y\\t_z
+\end{pmatrix}
+$$
+
+是该截面上的单位面积受力。
+在笛卡尔正交基底中：
+
+$$
+\boxed{
+\begin{pmatrix}
+t_x\\t_y\\t_z
+\end{pmatrix}
+=
+\begin{pmatrix}
+\sigma_{xx}&\sigma_{xy}&\sigma_{xz}\\
+\sigma_{yx}&\sigma_{yy}&\sigma_{yz}\\
+\sigma_{zx}&\sigma_{zy}&\sigma_{zz}
+\end{pmatrix}
+\begin{pmatrix}
+n_x\\n_y\\n_z
+\end{pmatrix}
+}
+$$
+
+这看上去就是一次普通矩阵乘法。
+但它背后有特定的物理意义：
+
+$$
+\boxed{
+\text{截面方向}
+\xrightarrow{\boldsymbol{\sigma}}
+\text{该截面的牵引力}
+}
+$$
+
+在带有欧氏内积的空间中，可以通过度量把单位法向量与法向协向量相互对应。
+如果把应力看作作用于法向协向量并输出牵引力向量的映射，那么它的自然张量类型是 $(2,0)$；若先用度量把法向向量对应为协向量，再将牵引力视为向量，则也可以把这一作用表示为 $(1,1)$ 型张量。
+对于经典对称柯西应力，还可以通过度量将它写成 $(0,2)$ 型双线性形式。
+它们不是互不相关的三个物理应力，而是通过度量联系起来的同一个物理应力对象的不同数学表示。
+在直角正交基底下，度量就是单位矩阵，所以这种区别往往被隐藏起来。
+#### 2. 旋转坐标系后，应力矩阵怎样变化？
+设旧坐标系下：
+
+$$
+\boldsymbol{\sigma}=
+\begin{pmatrix}
+10&2\\
+2&6
+\end{pmatrix}\ \mathrm{Pa}
+$$
+
+这里是二维应力场的例子。
+假设我们只是把坐标轴逆时针旋转 $45^\circ$，并没有真正改变流体状态。
+按照本文的被动坐标变换约定：
+
+$$
+Q=\frac1{\sqrt2}
+\begin{pmatrix}
+1&-1\\
+1&1
+\end{pmatrix}
+$$
+
+于是：
+
+$$
+\boldsymbol{\sigma}'
+=
+Q^{\mathsf T}
+\boldsymbol{\sigma}Q
+$$
+
+代入：
+
+$$
+\boxed{
+\boldsymbol{\sigma}'=
+\begin{pmatrix}
+10&-2\\
+-2&6
+\end{pmatrix}\ \mathrm{Pa}
+}
+$$
+
+请注意：
+原来：
+
+$$
+\sigma_{xy}=2
+$$
+
+新坐标下：
+
+$$
+\sigma'_{xy}=-2
+$$
+
+剪应力分量的符号变化了，但流体没有突然发生新的受力过程。
+变化的是你用来描述它的坐标方向。
+#### 3. 验证旋转前后的牵引力是同一个向量
+假设旧坐标系下的单位法向量为：
+
+$$
+\mathbf n=
+\begin{pmatrix}
+1\\0
+\end{pmatrix}
+$$
+
+原坐标系中计算牵引力：
+
+$$
+\mathbf t=
+\boldsymbol{\sigma}\mathbf n
+=
+\begin{pmatrix}
+10&2\\
+2&6
+\end{pmatrix}
+\begin{pmatrix}
+1\\0
+\end{pmatrix}
+$$
+
+得到：
+
+$$
+\boxed{
+\mathbf t=
+\begin{pmatrix}
+10\\2
+\end{pmatrix}\ \mathrm{Pa}
+}
+$$
+
+现在换到新坐标系。
+新法向量坐标为：
+
+$$
+\mathbf n'=Q^{\mathsf T}\mathbf n
+$$
+
+即：
+
+$$
+\mathbf n'
+=
+\frac1{\sqrt2}
+\begin{pmatrix}
+1\\-1
+\end{pmatrix}
+$$
+
+使用新应力矩阵：
+
+$$
+\mathbf t'=\boldsymbol{\sigma}'\mathbf n'
+$$
+
+得到：
+
+$$
+\mathbf t'
+=
+\begin{pmatrix}
+10&-2\\
+-2&6
+\end{pmatrix}
+\frac1{\sqrt2}
+\begin{pmatrix}
+1\\-1
+\end{pmatrix}
+$$
+
+所以：
+
+$$
+\boxed{
+\mathbf t'
+=
+\frac1{\sqrt2}
+\begin{pmatrix}
+12\\-8
+\end{pmatrix}
+}
+$$
+
+另一方面，直接对旧牵引力向量变换：
+
+$$
+Q^{\mathsf T}\mathbf t
+=
+\frac1{\sqrt2}
+\begin{pmatrix}
+1&1\\
+-1&1
+\end{pmatrix}
+\begin{pmatrix}
+10\\2
+\end{pmatrix}
+$$
+
+得到：
+
+$$
+Q^{\mathsf T}\mathbf t
+=
+\frac1{\sqrt2}
+\begin{pmatrix}
+12\\-8
+\end{pmatrix}
+$$
+
+因此：
+
+$$
+\boxed{
+\mathbf t'=Q^{\mathsf T}\mathbf t
+}
+$$
+
+这证明了：
+
+$$
+\boxed{
+\boldsymbol{\sigma}'\mathbf n'
+=
+Q^{\mathsf T}(\boldsymbol{\sigma}\mathbf n)
+}
+$$
+
+也就是说，先计算物理牵引力、再变换坐标，与先变换应力和法向量、再计算牵引力，得到完全一致的结果。
+这就是张量变换规律保证物理描述不依赖坐标系的具体体现。
+### 八、应力张量的主应力与特征值为什么重要？
+既然应力矩阵在坐标旋转后会变化，我们就需要寻找不随旋转改变的物理特征。
+这便引出了主应力。
+对于对称应力张量：
+
+$$
+\boldsymbol{\sigma}=\boldsymbol{\sigma}^{\mathsf T}
+$$
+
+可以寻找特征向量和特征值：
+
+$$
+\boxed{
+\boldsymbol{\sigma}\mathbf n=\lambda\mathbf n
+}
+$$
+
+与柯西应力定理：
+
+$$
+\mathbf t=\boldsymbol{\sigma}\mathbf n
+$$
+
+对比：
+
+$$
+\boxed{\mathbf t=\lambda\mathbf n}
+$$
+
+此时牵引力与截面法向量平行。
+意味着该截面上没有切向牵引力（剪应力为零），只有法向应力。
+这样的法向方向称为主应力方向，对应的特征值称为主应力。
+对于二维矩阵：
+
+$$
+\boldsymbol{\sigma}=
+\begin{pmatrix}
+10&2\\
+2&6
+\end{pmatrix}
+$$
+
+特征方程为：
+
+$$
+\det(\boldsymbol{\sigma}-\lambda I)=0
+$$
+
+即：
+
+$$
+\begin{vmatrix}
+10-\lambda&2\\
+2&6-\lambda
+\end{vmatrix}=0
+$$
+
+展开：
+
+$$
+\begin{gathered}
+(10-\lambda)(6-\lambda)-4=0\\
+\lambda^2-16\lambda+56=0
+\end{gathered}
+$$
+
+所以：
+
+$$
+\boxed{
+\lambda_{1,2}=8\pm2\sqrt2
+}
+$$
+
+即近似：
+
+$$
+\lambda_1\approx10.828,\qquad
+\lambda_2\approx5.172
+$$
+
+这两个主应力不会因为旋转正交坐标系而改变。
+它们描述的是应力状态的物理性质，而不是某个坐标方向上的偶然数值。
+<TensorExplorer mode="basis" client:visible />
+
+在主方向 $22.5^\circ$ 上，非对角分量为零；主应力为 $8\pm2\sqrt2$ Pa。
+
+### 九、再进一步：一般曲线坐标下，应力张量怎样变换？
+前面讨论的是常数矩阵 $S$ 对应的基底变化，特别是正交旋转。
+在微分几何和流体的曲线坐标系中，还需要使用雅可比矩阵。
+假设：
+
+$$
+x'^i=x'^i(x^1,x^2,x^3)
+$$
+
+定义雅可比矩阵：
+
+$$
+J^i_{\ j}=
+\frac{\partial x'^i}{\partial x^j}
+$$
+
+对于逆变向量：
+
+$$
+\boxed{
+v'^i=
+\frac{\partial x'^i}{\partial x^j}v^j
+}
+$$
+
+对于协向量：
+
+$$
+\boxed{
+\omega'_i=
+\frac{\partial x^j}{\partial x'^i}\omega_j
+}
+$$
+
+因此，对不同类型的二阶张量，有：
+二阶逆变张量：
+
+$$
+\boxed{
+T'^{ij}
+=
+\frac{\partial x'^i}{\partial x^k}
+\frac{\partial x'^j}{\partial x^\ell}
+T^{k\ell}
+}
+$$
+
+二阶协变张量：
+
+$$
+\boxed{
+T'_{ij}
+=
+\frac{\partial x^k}{\partial x'^i}
+\frac{\partial x^\ell}{\partial x'^j}
+T_{k\ell}
+}
+$$
+
+混合型张量：
+
+$$
+\boxed{
+T'^i_{\ j}
+=
+\frac{\partial x'^i}{\partial x^k}
+\frac{\partial x^\ell}{\partial x'^j}
+T^k_{\ \ell}
+}
+$$
+
+这些就是一般坐标变换下的张量变换定律。
+在一般坐标系中，还必须注意两个问题：
+第一，求散度、梯度等操作时通常需要使用协变导数，而不是把所有表达式中的 $\partial_j$ 原样照搬。
+第二，对于流体应力，法向量的归一化必须使用实际空间的度量。若使用非正交坐标，不能简单套用直角坐标下的普通矩阵乘法而不处理指标位置。
+例如，将应力用逆变分量 $\sigma^{ij}$ 表示时，柯西牵引力关系可以写为：
+
+$$
+\boxed{
+t^i=\sigma^{ij}n_j
+}
+$$
+
+这里：
+
+$$
+n_j=g_{jk}n^k
+$$
+
+而应力散度在一般曲线坐标下写成：
+
+$$
+\boxed{
+f^i_{\mathrm{surface}}=\nabla_j\sigma^{ij}
+}
+$$
+
+其中 $\nabla_j$ 是协变导数。
+如果使用混合形式：
+
+$$
+t^i=\sigma^i_{\ j}n^j
+$$
+
+也可以得到相同的物理牵引力。
+因此，在流体力学中：
+
+$$
+\boldsymbol{\sigma}\mathbf n
+$$
+
+是一种方便的无坐标简写，但一旦展开成具体分量，就必须清楚使用哪种基底、哪种指标类型以及什么度量。
+### 十、把整套知识联系起来
+你现在可以用以下逻辑理解线性代数、张量和流体力学之间的关系。
+线性代数：向量与基底
+$\mathbf v=v^i\mathbf e_i$
+基底变换
+$E'=ES,\qquad v'=S^{-1}v$
+协变与逆变
+$v^i,\quad\omega_i,\quad g_{ij}$
+二阶张量的矩阵表示
+$T^{ij},\quad T^i_{\ j},\quad T_{ij}$
+正交坐标旋转
+$A'=Q^{\mathsf T}AQ$
+流体力学：应力与牵引力
+$\mathbf t=\boldsymbol{\sigma}\mathbf n$
+#### 十一、最后记住这五个公式
+| 核心概念 | 公式 |
+| --- | --- |
+| 向量的基底变换 | $v'=S^{-1}v$ |
+| 协向量的基底变换 | $\omega'=S^{\mathsf T}\omega$ |
+| 协变二阶张量的变换 | $B'=S^{\mathsf T}BS$ |
+| 混合二阶张量的变换 | $A'=S^{-1}AS$ |
+| 正交基底旋转 | $A'=Q^{\mathsf T}AQ$ |
+对于流体力学，最关键的是最后再联系到：
+
+$$
+\boxed{
+\mathbf t(\mathbf n)=\boldsymbol{\sigma}\mathbf n
+}
+$$
+
+以及：
+
+$$
+\boxed{
+\nabla\cdot\boldsymbol{\sigma}
+=
+\text{局部单位体积净表面力}
+}
+$$
+
+因此，你可以把张量理解为一种使物理规律不依赖于坐标选择的数学语言。
+矩阵负责计算，基底负责表示，而张量变换规律保证我们使用不同坐标系计算出来的结果仍然对应同一个物理过程。
+对于后续的 PDE 和 CFD 学习，真正值得进一步推导的是：**为什么在笛卡尔坐标系中 $\nabla\cdot\boldsymbol{\sigma}$ 可以直接写成偏导数之和，而在柱坐标和球坐标中必须额外引入几何项。**这将把你刚学到的协变导数、度量张量、流体应力和 Navier–Stokes 方程完整地连接起来。
+
+## 问题 5：速度梯度、应变率、自旋与涡度
+
+> **我的问题（原文）**
+>
+> 从基础开始，详细推导速度梯度张量 ∇u 如何分解成应变率张量 D 与旋转张量 W，解释各个矩阵元素的物理含义以及与涡度 curl u 的关系。
+
+**回答**
+
+### 流体力学中的速度梯度张量：从 $\nabla\mathbf u$ 到应变率、旋转和涡度
+
+理解流体力学中的速度梯度张量（Velocity Gradient Tensor），本质上是在回答一个问题：
+
+一小团流体在运动过程中，究竟如何发生平移、拉伸、压缩、剪切以及旋转？
+
+单纯知道流体的速度 $\mathbf u$ 还不够。我们还需要知道速度在空间中如何变化。
+
+速度梯度张量正是用于描述这种变化的核心数学对象。
+
+我们将沿着下面的顺序推导：
+
+1. 从速度场出发，推导速度梯度矩阵的每一个元素。
+2. 利用泰勒展开，理解速度梯度与流体微团变形的关系。
+3. 从线性代数证明 $L=D+W$。
+4. 通过微小线段的长度、夹角和旋转，推导 $D$ 与 $W$ 的物理意义。
+5. 推导旋转张量 $W$ 与涡度 $\boldsymbol{\omega}=\nabla\times\mathbf u$ 的关系。
+6. 将这些结果联系到牛顿流体的黏性应力、Navier–Stokes 方程和涡度方程。
+
+先给出我们最终需要理解的三个核心公式：
+
+速度梯度张量
+
+$$
+L=\nabla\mathbf u,\qquad L_{ij}=\frac{\partial u_i}{\partial x_j}
+$$
+
+应变率张量
+
+$$
+D=\frac12(L+L^{\mathsf T})
+$$
+
+对称部分：瞬时形变。
+
+旋转张量
+
+$$
+W=\frac12(L-L^{\mathsf T})
+$$
+
+反对称部分：局部旋转
+$$
+\boxed{L=D+W}
+$$
+
+注意，以下统一使用这一约定：
+
+$$
+\boxed{L_{ij}=\partial_j u_i}
+$$
+
+即矩阵第 $i$ 行表示速度的第 $i$ 个分量，第 $j$ 列表示对第 $j$ 个空间坐标求导。
+部分教材会把 $\nabla\mathbf u$ 的指标顺序定义为 $\partial_i u_j$，相当于这里的转置。学习时一定要首先检查作者的约定。
+### 一、从基础开始：速度场究竟是什么？
+#### 1. 一个流体质点的速度
+在三维空间中，流体的速度由三个分量组成：
+
+$$
+\boxed{
+\mathbf u(x,y,z,t)=
+\begin{pmatrix}
+u(x,y,z,t)\\
+v(x,y,z,t)\\
+w(x,y,z,t)
+\end{pmatrix}
+}
+$$
+
+其中：
+- $u$：沿 $x$ 方向的速度。
+- $v$：沿 $y$ 方向的速度。
+- $w$：沿 $z$ 方向的速度。
+这里 $w$ 是第三个速度分量，后面大写的 $W$ 是旋转张量，二者不要混淆。
+流体与刚体不同：同一时刻，不同位置的流体质点可以具有不同的速度。
+例如，二维速度场：
+
+$$
+\mathbf u(x,y)=
+\begin{pmatrix}
+2x\\-y
+\end{pmatrix}
+$$
+
+表示：
+
+$$
+u(x,y)=2x,\qquad v(x,y)=-y
+$$
+
+观察它的物理含义：
+- $x>0$ 时，流体向右运动；$x<0$ 时，流体向左运动。
+- $y>0$ 时，流体向下运动；$y<0$ 时，流体向上运动。
+因此，这个流场会沿 $x$ 方向拉伸物质微团，同时沿 $y$ 方向压缩它。
+这个对象就是速度梯度张量。
+### 二、从偏导数构造速度梯度矩阵
+#### 1. 为什么需要九个偏导数？
+考虑速度的第一个分量：
+
+$$
+u=u(x,y,z,t)
+$$
+
+在固定时刻，它既可能沿 $x$ 方向变化，也可能沿 $y,z$ 方向变化。
+因此有：
+
+$$
+\frac{\partial u}{\partial x},\quad
+\frac{\partial u}{\partial y},\quad
+\frac{\partial u}{\partial z}
+$$
+
+同样，速度的第二个分量 $v$ 有三个空间偏导数，第三个分量 $w$ 也有三个。
+于是共有：
+
+$$
+3\times3=9
+$$
+
+个偏导数。
+将它们排列成矩阵：
+
+$$
+\boxed{
+L=\nabla\mathbf u=
+\begin{pmatrix}
+\frac{\partial u}{\partial x}&
+\frac{\partial u}{\partial y}&
+\frac{\partial u}{\partial z}\\[6pt]
+\frac{\partial v}{\partial x}&
+\frac{\partial v}{\partial y}&
+\frac{\partial v}{\partial z}\\[6pt]
+\frac{\partial w}{\partial x}&
+\frac{\partial w}{\partial y}&
+\frac{\partial w}{\partial z}
+\end{pmatrix}
+}
+$$
+
+这就是三维笛卡尔坐标下的速度梯度张量。
+#### 2. 如何理解每一个矩阵元素？
+例如：
+
+$$
+L_{12}=\frac{\partial u}{\partial y}
+$$
+
+它的含义是：
+沿 $y$ 方向移动一个很小的距离时，$x$ 方向速度变化得有多快。
+如果：
+
+$$
+\frac{\partial u}{\partial y}=5\ \mathrm{s^{-1}}
+$$
+
+那么在局部线性近似下，沿 $y$ 方向移动：
+
+$$
+\delta y=0.01\ \mathrm m
+$$
+
+对应的 $x$ 向速度变化约为：
+
+$$
+\delta u\approx5(0.01)=0.05\ \mathrm{m/s}
+$$
+
+再例如：
+
+$$
+L_{21}=\frac{\partial v}{\partial x}
+$$
+
+表示沿 $x$ 方向移动时，$y$ 方向速度的变化率。
+特别注意：
+
+$$
+\frac{\partial u}{\partial y}
+\quad\text{与}\quad
+\frac{\partial v}{\partial x}
+$$
+
+不是同一件事。
+一个描述横向速度沿竖直方向的变化，一个描述竖直速度沿水平方向的变化。
+但这两个量将共同决定流体的剪切变形与局部旋转。
+#### 3. 二维速度梯度矩阵
+对于二维流场：
+
+$$
+\mathbf u=
+\begin{pmatrix}
+u(x,y)\\v(x,y)
+\end{pmatrix}
+$$
+
+速度梯度简化为：
+
+$$
+\boxed{
+L=
+\begin{pmatrix}
+u_x&u_y\\
+v_x&v_y
+\end{pmatrix}
+}
+$$
+
+其中：
+
+$$
+u_x=\frac{\partial u}{\partial x},\quad
+u_y=\frac{\partial u}{\partial y}
+$$
+
+等等。
+四个元素的基本含义如下：
+| 矩阵元素 | 数学含义 | 直接描述 |
+| --- | --- | --- |
+| $L_{11}=u_x$ | $x$ 速度沿 $x$ 的变化率 | $x$ 向线段的伸缩率 |
+| $L_{22}=v_y$ | $y$ 速度沿 $y$ 的变化率 | $y$ 向线段的伸缩率 |
+| $L_{12}=u_y$ | $x$ 速度沿 $y$ 的变化率 | 剪切与旋转的共同贡献 |
+| $L_{21}=v_x$ | $y$ 速度沿 $x$ 的变化率 | 剪切与旋转的共同贡献 |
+不能仅凭单独一个非对角元素，就直接判断它是纯剪切还是纯旋转。
+这正是我们要进一步分解 $L$ 的原因。
+### 三、为什么速度梯度能描述流体微团的变形？
+这里需要使用两个知识：多元泰勒展开和流体质点运动学。
+#### 1. 研究相邻的两个流体质点
+假设流体质点 $P$ 位于：
+
+$$
+\mathbf x
+$$
+
+另一个非常接近的流体质点 $Q$ 位于：
+
+$$
+\mathbf x+\delta\mathbf x
+$$
+
+其中：
+
+$$
+\delta\mathbf x=
+\begin{pmatrix}
+\delta x\\\delta y\\\delta z
+\end{pmatrix}
+$$
+
+是从 $P$ 指向 $Q$ 的微小位移向量。
+它们的速度分别为：
+
+$$
+\mathbf u(\mathbf x,t)
+$$
+
+以及：
+
+$$
+\mathbf u(\mathbf x+\delta\mathbf x,t)
+$$
+
+两者的速度差为：
+
+$$
+\delta\mathbf u
+=
+\mathbf u(\mathbf x+\delta\mathbf x,t)
+-
+\mathbf u(\mathbf x,t)
+$$
+
+#### 2. 使用多元泰勒展开
+因为速度场在该处可微：
+
+$$
+\mathbf u(\mathbf x+\delta\mathbf x,t)
+=
+\mathbf u(\mathbf x,t)
++
+L(\mathbf x,t)\delta\mathbf x
++
+o(|\delta\mathbf x|)
+$$
+
+两边减去 $\mathbf u(\mathbf x,t)$，得到：
+
+$$
+\boxed{
+\delta\mathbf u
+=
+L\,\delta\mathbf x
++
+o(|\delta\mathbf x|)
+}
+$$
+
+在微小尺度的线性近似中：
+
+$$
+\boxed{\delta\mathbf u\approx L\delta\mathbf x}
+$$
+
+这意味着：
+
+$$
+\underbrace{\delta\mathbf x}_{\text{相对位置}}
+\quad\xrightarrow{\ L\ }\quad
+\underbrace{\delta\mathbf u}_{\text{相对速度}}
+$$
+
+速度梯度张量就是将相对位置向量映射成相对速度向量的线性映射。
+这也是为什么它是一个二阶张量，并且能够使用矩阵表示。
+#### 3. 从速度差进一步推导微小线段的演化
+现在不要只比较两个固定空间点，而是追踪两个随流体运动的物质点：
+
+$$
+\begin{gathered}
+\frac{d\mathbf x_P}{dt}=\mathbf u(\mathbf x_P,t)\\
+\frac{d\mathbf x_Q}{dt}=\mathbf u(\mathbf x_Q,t)
+\end{gathered}
+$$
+
+定义两个质点之间的位移：
+
+$$
+\delta\mathbf x=\mathbf x_Q-\mathbf x_P
+$$
+
+对时间求导：
+
+$$
+\frac{D}{Dt}(\delta\mathbf x)
+=
+\frac{d\mathbf x_Q}{dt}
+-
+\frac{d\mathbf x_P}{dt}
+$$
+
+所以：
+
+$$
+\frac{D}{Dt}(\delta\mathbf x)
+=
+\mathbf u(\mathbf x_Q,t)
+-
+\mathbf u(\mathbf x_P,t)
+$$
+
+也就是：
+
+$$
+\frac{D}{Dt}(\delta\mathbf x)=\delta\mathbf u
+$$
+
+利用泰勒展开，在无限小线元极限：
+
+$$
+\boxed{
+\frac{D}{Dt}(\delta\mathbf x)
+=
+L\,\delta\mathbf x
+}
+$$
+
+这是流体局部运动学的基础方程。
+它告诉我们，微小物质线段如何随着时间发生变化，完全由局部速度梯度 $L$ 决定。
+注意这是无穷小物质线元的精确演化关系；对于具有有限长度的线段，如果速度梯度沿线段变化，就不能简单地用同一个 $L$ 精确描述整条线段。
+### 四、纯数学推导：任何矩阵都能分解成对称与反对称部分
+现在先暂时不讨论流体物理意义，只考虑线性代数。
+设一个任意方阵：
+
+$$
+L\in\mathbb R^{n\times n}
+$$
+
+定义：
+
+$$
+\begin{gathered}
+\boxed{
+D=\frac12(L+L^{\mathsf T})
+}\\
+\boxed{
+W=\frac12(L-L^{\mathsf T})
+}
+\end{gathered}
+$$
+
+将两者相加：
+
+$$
+D+W
+=
+\frac12(L+L^{\mathsf T})
++
+\frac12(L-L^{\mathsf T})
+$$
+
+整理：
+
+$$
+D+W
+=
+\frac12(2L)
+$$
+
+因此：
+
+$$
+\boxed{L=D+W}
+$$
+
+#### 1. 为什么 $D$ 一定对称？
+取转置：
+
+$$
+D^{\mathsf T}
+=
+\left[
+\frac12(L+L^{\mathsf T})
+\right]^{\mathsf T}
+$$
+
+利用：
+
+$$
+(A+B)^{\mathsf T}=A^{\mathsf T}+B^{\mathsf T}
+$$
+
+得：
+
+$$
+D^{\mathsf T}
+=
+\frac12(L^{\mathsf T}+L)
+$$
+
+所以：
+
+$$
+\boxed{D^{\mathsf T}=D}
+$$
+
+#### 2. 为什么 $W$ 一定反对称？
+同理：
+
+$$
+W^{\mathsf T}
+=
+\frac12(L^{\mathsf T}-L)
+$$
+
+因此：
+
+$$
+\boxed{W^{\mathsf T}=-W}
+$$
+
+对于二维情形：
+
+$$
+L=
+\begin{pmatrix}
+a&b\\
+c&d
+\end{pmatrix}
+$$
+
+其对称部分为：
+
+$$
+\boxed{
+D=
+\begin{pmatrix}
+a&\frac{b+c}{2}\\[5pt]
+\frac{b+c}{2}&d
+\end{pmatrix}
+}
+$$
+
+反对称部分为：
+
+$$
+\boxed{
+W=
+\begin{pmatrix}
+0&\frac{b-c}{2}\\[5pt]
+\frac{c-b}{2}&0
+\end{pmatrix}
+}
+$$
+
+请观察：
+- 对角元素 $a,d$ 全部进入 $D$。
+- 两个非对角元素的平均值进入 $D$。
+- 两个非对角元素的差进入 $W$。
+这并不是随意定义，而是线性代数中任意矩阵都具有的唯一对称—反对称分解。
+接下来我们证明：为什么这个代数分解，恰好对应流体的变形与旋转。
+### 五、应变率张量 $D$ 为什么描述拉伸、压缩和剪切？
+我们先把速度梯度矩阵写成二维形式：
+
+$$
+L=
+\begin{pmatrix}
+u_x&u_y\\
+v_x&v_y
+\end{pmatrix}
+$$
+
+则对称部分为：
+
+$$
+\boxed{
+D=
+\begin{pmatrix}
+u_x&\frac12(u_y+v_x)\\[5pt]
+\frac12(u_y+v_x)&v_y
+\end{pmatrix}
+}
+$$
+
+其中：
+
+$$
+\begin{gathered}
+D_{11}=u_x,\qquad D_{22}=v_y\\
+D_{12}=D_{21}=\frac12(u_y+v_x)
+\end{gathered}
+$$
+
+下面不靠直觉，而是从微小线段的长度变化严格推导它的物理意义。
+#### 1. 推导微小线段长度如何变化
+考虑随流体运动的物质线元：
+
+$$
+\delta\mathbf x
+$$
+
+它的长度平方是：
+
+$$
+\ell^2=\delta\mathbf x^{\mathsf T}\delta\mathbf x
+$$
+
+也就是：
+
+$$
+\ell^2=\delta x_i\delta x_i
+$$
+
+对时间求导：
+
+$$
+\frac{D\ell^2}{Dt}
+=
+\frac{D}{Dt}
+(\delta\mathbf x^{\mathsf T}\delta\mathbf x)
+$$
+
+使用乘积法则：
+
+$$
+\frac{D\ell^2}{Dt}
+=
+2\delta\mathbf x^{\mathsf T}
+\frac{D(\delta\mathbf x)}{Dt}
+$$
+
+而我们已经得到：
+
+$$
+\frac{D(\delta\mathbf x)}{Dt}=L\delta\mathbf x
+$$
+
+所以：
+
+$$
+\frac{D\ell^2}{Dt}
+=
+2\delta\mathbf x^{\mathsf T}L\delta\mathbf x
+$$
+
+将：
+
+$$
+L=D+W
+$$
+
+代入：
+
+$$
+\frac{D\ell^2}{Dt}
+=
+2\delta\mathbf x^{\mathsf T}D\delta\mathbf x
++
+2\delta\mathbf x^{\mathsf T}W\delta\mathbf x
+$$
+
+关键来了。
+由于 $W$ 是反对称矩阵：
+
+$$
+W^{\mathsf T}=-W
+$$
+
+对任意实向量 $\mathbf a$，都有：
+
+$$
+\boxed{
+\mathbf a^{\mathsf T}W\mathbf a=0
+}
+$$
+
+证明非常简单。
+令：
+
+$$
+s=\mathbf a^{\mathsf T}W\mathbf a
+$$
+
+这是一个标量，所以：
+
+$$
+s=s^{\mathsf T}
+$$
+
+但：
+
+$$
+s^{\mathsf T}
+=
+\mathbf a^{\mathsf T}W^{\mathsf T}\mathbf a
+=
+-\mathbf a^{\mathsf T}W\mathbf a
+=-s
+$$
+
+因此：
+
+$$
+s=-s
+$$
+
+只能得到：
+
+$$
+s=0
+$$
+
+于是：
+
+$$
+\boxed{
+\frac{D\ell^2}{Dt}
+=
+2\delta\mathbf x^{\mathsf T}D\delta\mathbf x
+}
+$$
+
+这就是一个非常重要的物理结论：
+流体微小物质线段的瞬时长度变化，仅由速度梯度的对称部分 $D$ 决定。反对称部分 $W$ 不改变线段长度。
+如果定义单位方向向量：
+
+$$
+\mathbf a=\frac{\delta\mathbf x}{\ell}
+$$
+
+由于：
+
+$$
+\frac{D\ell^2}{Dt}=2\ell\frac{D\ell}{Dt}
+$$
+
+进一步得到：
+
+$$
+\boxed{
+\frac1\ell\frac{D\ell}{Dt}
+=
+\mathbf a^{\mathsf T}D\mathbf a
+}
+$$
+
+这就是沿方向 $\mathbf a$ 的相对伸长率。
+#### 2. 对角元素为什么表示正应变率？
+取沿 $x$ 方向的物质线段：
+
+$$
+\mathbf a=\mathbf e_x=
+\begin{pmatrix}1\\0\end{pmatrix}
+$$
+
+则：
+
+$$
+\frac1\ell\frac{D\ell}{Dt}
+=
+\begin{pmatrix}1&0\end{pmatrix}
+D
+\begin{pmatrix}1\\0\end{pmatrix}
+$$
+
+计算得到：
+
+$$
+\boxed{
+\frac1\ell\frac{D\ell}{Dt}=D_{11}=u_x
+}
+$$
+
+所以：
+- $u_x>0$：沿 $x$ 方向伸长。
+- $u_x<0$：沿 $x$ 方向缩短。
+- $u_x=0$：沿 $x$ 方向瞬时长度不变。
+同理：
+
+$$
+\boxed{
+D_{22}=v_y
+}
+$$
+
+是沿 $y$ 方向的相对伸长率。
+在三维中：
+
+$$
+D_{33}=w_z
+$$
+
+是沿 $z$ 方向的相对伸长率。
+#### 3. 非对角元素为什么表示剪切应变率？
+现在考虑两条初始相互垂直的物质线元：
+
+$$
+\delta\mathbf a=a\mathbf e_x,\qquad
+\delta\mathbf b=b\mathbf e_y
+$$
+
+初始：
+
+$$
+\delta\mathbf a\cdot\delta\mathbf b=0
+$$
+
+若两条物质线元之间的夹角是 $\theta$，则：
+
+$$
+\delta\mathbf a\cdot\delta\mathbf b
+=
+ab\cos\theta
+$$
+
+初始时：
+
+$$
+\theta=\frac\pi2
+$$
+
+对内积求物质导数：
+
+$$
+\begin{aligned}
+\frac{D}{Dt}(\delta\mathbf a\cdot\delta\mathbf b)
+={}&
+\frac{D\delta\mathbf a}{Dt}\cdot\delta\mathbf b\\
+&+\delta\mathbf a\cdot
+\frac{D\delta\mathbf b}{Dt}
+\end{aligned}
+$$
+
+使用：
+
+$$
+\begin{gathered}
+\frac{D\delta\mathbf a}{Dt}=L\delta\mathbf a\\
+\frac{D\delta\mathbf b}{Dt}=L\delta\mathbf b
+\end{gathered}
+$$
+
+得到：
+
+$$
+\begin{aligned}
+\frac{D}{Dt}(\delta\mathbf a\cdot\delta\mathbf b)
+&=
+(L\delta\mathbf a)\cdot\delta\mathbf b
++\delta\mathbf a\cdot(L\delta\mathbf b)\\
+&=
+\delta\mathbf a^{\mathsf T}
+(L^{\mathsf T}+L)\delta\mathbf b\\
+&=
+2\delta\mathbf a^{\mathsf T}D\delta\mathbf b
+\end{aligned}
+$$
+
+代入两条沿坐标轴的线元：
+
+$$
+\boxed{
+\frac{D}{Dt}(\delta\mathbf a\cdot\delta\mathbf b)
+=
+2abD_{12}
+}
+$$
+
+另一方面：
+
+$$
+\frac{D}{Dt}(ab\cos\theta)
+=
+\frac{D(ab)}{Dt}\cos\theta
+-ab\sin\theta\frac{D\theta}{Dt}
+$$
+
+在初始直角位置：
+
+$$
+\cos\theta=0,\qquad\sin\theta=1
+$$
+
+所以：
+
+$$
+-ab\frac{D\theta}{Dt}=2abD_{12}
+$$
+
+两边消去 $ab$：
+
+$$
+\boxed{
+\frac{D\theta}{Dt}=-2D_{12}
+}
+$$
+
+如果用工程剪切角 $\gamma$ 表示原来的直角减少了多少：
+
+$$
+\gamma=\frac\pi2-\theta
+$$
+
+则：
+
+$$
+\boxed{
+\dot\gamma=2D_{12}=u_y+v_x
+}
+$$
+
+因此：
+
+$$
+\boxed{
+D_{12}=\frac12(u_y+v_x)
+}
+$$
+
+表示工程剪切角变化率的一半。
+这就是为什么应变率张量中的非对角元素需要乘以 $\frac12$。
+### 六、旋转张量 $W$ 为什么描述局部刚体旋转？
+现在研究反对称部分：
+
+$$
+W=\frac12(L-L^{\mathsf T})
+$$
+
+在二维中：
+
+$$
+\boxed{
+W=
+\begin{pmatrix}
+0&\frac12(u_y-v_x)\\[5pt]
+\frac12(v_x-u_y)&0
+\end{pmatrix}
+}
+$$
+
+定义局部角速度：
+
+$$
+\boxed{
+\Omega_z=\frac12(v_x-u_y)
+}
+$$
+
+那么：
+
+$$
+\boxed{
+W=
+\begin{pmatrix}
+0&-\Omega_z\\
+\Omega_z&0
+\end{pmatrix}
+}
+$$
+
+为什么这个矩阵代表旋转？
+#### 1. 从刚体旋转开始
+假设二维流体微团绕原点以恒定角速度 $\Omega$ 逆时针旋转。
+令：
+
+$$
+\mathbf x=
+\begin{pmatrix}x\\y\end{pmatrix}
+$$
+
+如果一个质点与原点的距离为 $r$，其切向速度大小为：
+
+$$
+|\mathbf u|=|\Omega|r
+$$
+
+对于逆时针旋转：
+
+$$
+\boxed{
+\mathbf u(x,y)=
+\begin{pmatrix}
+-\Omega y\\
+\Omega x
+\end{pmatrix}
+}
+$$
+
+于是：
+
+$$
+\begin{gathered}
+u_x=0,\qquad u_y=-\Omega\\
+v_x=\Omega,\qquad v_y=0
+\end{gathered}
+$$
+
+速度梯度矩阵：
+
+$$
+L=
+\begin{pmatrix}
+0&-\Omega\\
+\Omega&0
+\end{pmatrix}
+$$
+
+计算对称部分：
+
+$$
+D=\frac12(L+L^{\mathsf T})=0
+$$
+
+反对称部分：
+
+$$
+W=\frac12(L-L^{\mathsf T})=L
+$$
+
+因此：
+
+$$
+\boxed{
+D=0,\qquad
+W=
+\begin{pmatrix}
+0&-\Omega\\
+\Omega&0
+\end{pmatrix}
+}
+$$
+
+说明纯刚体旋转不会改变物质微团的长度和夹角，仅改变它的方向。
+#### 2. 用矩阵解释旋转的方向
+取一条沿 $x$ 轴的微小物质线元：
+
+$$
+\delta\mathbf x=
+\begin{pmatrix}a\\0\end{pmatrix}
+$$
+
+其旋转引起的相对速度为：
+
+$$
+\delta\mathbf u=W\delta\mathbf x
+$$
+
+即：
+
+$$
+\delta\mathbf u=
+\begin{pmatrix}
+0&-\Omega\\
+\Omega&0
+\end{pmatrix}
+\begin{pmatrix}a\\0\end{pmatrix}
+=
+\begin{pmatrix}
+0\\\Omega a
+\end{pmatrix}
+$$
+
+对于 $\Omega>0$，原本沿 $x$ 方向的物质线元，其端点获得向上的相对速度。
+这意味着它正朝逆时针方向转动。
+而对于沿 $y$ 方向的线元：
+
+$$
+\delta\mathbf x=
+\begin{pmatrix}0\\b\end{pmatrix}
+$$
+
+得到：
+
+$$
+W\delta\mathbf x=
+\begin{pmatrix}
+-\Omega b\\0
+\end{pmatrix}
+$$
+
+其端点向左运动。
+两个方向的运动都与逆时针旋转一致。
+#### 3. 在一般流场中，如何区分变形与旋转？
+对于局部线元：
+
+$$
+\frac{D(\delta\mathbf x)}{Dt}
+=
+L\delta\mathbf x
+$$
+
+利用 $L=D+W$：
+
+$$
+\boxed{
+\frac{D(\delta\mathbf x)}{Dt}
+=
+\underbrace{D\delta\mathbf x}_{\text{形变贡献}}
++
+\underbrace{W\delta\mathbf x}_{\text{刚体式旋转贡献}}
+}
+$$
+
+这里要注意一个精确的物理区分：
+$W$ 描述流体微团的瞬时局部自旋，但在同时存在形变时，任意一条物质线段的实际方向变化率不一定等于 $W$ 对应的角速度。
+原因是应变率 $D$ 也可能改变该线段的方向。
+例如，纯剪切变形可以改变微小线段的倾斜方向，即使 $W=0$。
+所以不能简单认为：
+
+$$
+W=0\Longrightarrow\text{所有物质线段方向不发生变化}
+$$
+
+正确理解是：
+
+$$
+W=0\Longrightarrow\text{局部反对称旋转贡献为零}
+$$
+
+但对称形变仍可能改变线段的方向。
+### 七、涡度 $\nabla\times\mathbf u$ 与旋转张量 $W$ 的关系
+这是本次推导另一个最重要的部分。
+首先必须区分：
+- 涡度（Vorticity）：$\boldsymbol{\omega}=\nabla\times\mathbf u$，是一个向量。
+- 旋转张量（Spin Tensor）：$W=\frac12(L-L^{\mathsf T})$，是一个反对称矩阵。
+- 局部角速度（Angular Velocity）：$\boldsymbol{\Omega}$，也是一个向量。
+它们之间的关系为：
+
+$$
+\boxed{
+\boldsymbol{\Omega}=\frac12\boldsymbol{\omega}
+}
+$$
+
+这里的 $\boldsymbol{\Omega}$ 是与局部反对称速度梯度对应的自旋向量。
+接下来我们分别在二维和三维中证明。
+#### 1. 从二维涡度的定义开始
+二维速度场：
+
+$$
+\mathbf u=
+\begin{pmatrix}
+u(x,y)\\
+v(x,y)\\
+0
+\end{pmatrix}
+$$
+
+三维旋度定义是：
+
+$$
+\nabla\times\mathbf u
+=
+\begin{vmatrix}
+\mathbf e_x&\mathbf e_y&\mathbf e_z\\
+\partial_x&\partial_y&\partial_z\\
+u&v&w
+\end{vmatrix}
+$$
+
+按照形式行列式展开：
+
+$$
+\nabla\times\mathbf u=
+\begin{pmatrix}
+\partial_yw-\partial_zv\\
+\partial_zu-\partial_xw\\
+\partial_xv-\partial_yu
+\end{pmatrix}
+$$
+
+对于二维流动：
+
+$$
+w=0,\qquad\partial_z=0
+$$
+
+因此：
+
+$$
+\boxed{
+\boldsymbol{\omega}=
+\begin{pmatrix}
+0\\
+0\\
+v_x-u_y
+\end{pmatrix}
+}
+$$
+
+所以二维涡度通常使用一个标量表示：
+
+$$
+\boxed{\omega_z=v_x-u_y}
+$$
+
+而前面定义的旋转张量是：
+
+$$
+W=
+\begin{pmatrix}
+0&-\frac12(v_x-u_y)\\
+\frac12(v_x-u_y)&0
+\end{pmatrix}
+$$
+
+因此：
+
+$$
+\boxed{
+W=
+\frac12
+\begin{pmatrix}
+0&-\omega_z\\
+\omega_z&0
+\end{pmatrix}
+}
+$$
+
+于是得到：
+
+$$
+\boxed{
+\Omega_z=\frac{\omega_z}{2}
+}
+$$
+
+#### 2. 为什么涡度是角速度的两倍？
+考虑刚体逆时针旋转：
+
+$$
+u=-\Omega y,\qquad v=\Omega x
+$$
+
+计算二维涡度：
+
+$$
+\omega_z
+=
+\frac{\partial v}{\partial x}
+-
+\frac{\partial u}{\partial y}
+$$
+
+由于：
+
+$$
+\begin{gathered}
+\frac{\partial v}{\partial x}=\Omega\\
+\frac{\partial u}{\partial y}=-\Omega
+\end{gathered}
+$$
+
+所以：
+
+$$
+\omega_z=\Omega-(-\Omega)
+$$
+
+得到：
+
+$$
+\boxed{\omega_z=2\Omega}
+$$
+
+这说明涡度并不是直接等于流体微团的局部自旋角速度，而是后者的两倍。
+这个因子 $2$ 正是从速度梯度的反对称分解中出现的。
+#### 3. 交互观察：纯拉伸、纯旋转和简单剪切
+下面三个速度场非常重要。它们能够帮助你直观理解为什么应变率、旋转张量和涡度必须区分。
+<TensorExplorer mode="motion" client:visible />
+
+演示将系数设为 $1\,\mathrm{s^{-1}}$，便于比较三个流动。各图分别使用 $e^{tL}$、$e^{tD}$、$e^{tW}$ 的精确解。$L=D+W$ 是瞬时梯度分解；有限时间的三幅形状不能相加，一般也不能把指数直接拆成乘积。
+
+#### 4. 三维旋转张量与涡度
+现在考虑三维速度场：
+
+$$
+\mathbf u=
+\begin{pmatrix}
+u\\v\\w
+\end{pmatrix}
+$$
+
+涡度为：
+
+$$
+\boxed{
+\boldsymbol{\omega}
+=
+\nabla\times\mathbf u
+=
+\begin{pmatrix}
+w_y-v_z\\
+u_z-w_x\\
+v_x-u_y
+\end{pmatrix}
+}
+$$
+
+设：
+
+$$
+\begin{gathered}
+\omega_x=w_y-v_z\\
+\omega_y=u_z-w_x\\
+\omega_z=v_x-u_y
+\end{gathered}
+$$
+
+三维旋转张量：
+
+$$
+W=\frac12
+\begin{pmatrix}
+0&u_y-v_x&u_z-w_x\\
+v_x-u_y&0&v_z-w_y\\
+w_x-u_z&w_y-v_z&0
+\end{pmatrix}
+$$
+
+代入涡度分量，得到：
+
+$$
+\boxed{
+W=
+\frac12
+\begin{pmatrix}
+0&-\omega_z&\omega_y\\
+\omega_z&0&-\omega_x\\
+-\omega_y&\omega_x&0
+\end{pmatrix}
+}
+$$
+
+这个矩阵非常值得记住。
+如果定义：
+
+$$
+\boldsymbol{\Omega}=\frac12\boldsymbol{\omega}
+$$
+
+那么：
+
+$$
+W=
+\begin{pmatrix}
+0&-\Omega_z&\Omega_y\\
+\Omega_z&0&-\Omega_x\\
+-\Omega_y&\Omega_x&0
+\end{pmatrix}
+$$
+
+对任意向量 $\mathbf a$：
+
+$$
+\boxed{
+W\mathbf a=\boldsymbol{\Omega}\times\mathbf a
+}
+$$
+
+右边正是三维刚体角速度产生的瞬时相对速度。
+因此，三维反对称矩阵 $W$ 可以和三维自旋向量 $\boldsymbol{\Omega}$ 一一对应。
+它们是描述同一局部旋转信息的两种数学形式。
+### 八、一个容易理解错的问题：涡度不为零，是否意味着流体一定绕圈运动？
+不一定。
+最典型的反例是简单剪切流（Simple Shear Flow）。
+考虑：
+
+$$
+\boxed{
+\mathbf u(x,y)=
+\begin{pmatrix}
+\gamma y\\
+0
+\end{pmatrix}
+}
+$$
+
+这里 $\gamma$ 是常数剪切率。
+流体粒子的运动方向始终平行于 $x$ 轴。
+因为：
+
+$$
+v=0
+$$
+
+所以每个流体粒子的 $y$ 坐标保持不变，轨迹为水平直线。
+但它的涡度是什么？
+
+$$
+\omega_z=v_x-u_y
+$$
+
+由于：
+
+$$
+v_x=0,\qquad u_y=\gamma
+$$
+
+所以：
+
+$$
+\boxed{\omega_z=-\gamma}
+$$
+
+这是一个非零常数。
+速度梯度：
+
+$$
+L=
+\begin{pmatrix}
+0&\gamma\\
+0&0
+\end{pmatrix}
+$$
+
+其应变率张量：
+
+$$
+\boxed{
+D=
+\begin{pmatrix}
+0&\gamma/2\\
+\gamma/2&0
+\end{pmatrix}
+}
+$$
+
+旋转张量：
+
+$$
+\boxed{
+W=
+\begin{pmatrix}
+0&\gamma/2\\
+-\gamma/2&0
+\end{pmatrix}
+}
+$$
+
+因此，虽然流体粒子的轨迹都是直线，局部流体微团仍具有非零的反对称旋转贡献。
+这揭示了一个非常重要的区别：
+流体质点的运动轨迹、流体微团的局部自旋和涡度，是三个有关联但不相同的概念。
+- 质点轨迹描述某个流体质点随时间如何运动。
+- $W$ 描述流体微团的局部刚体式旋转部分。
+- $\boldsymbol{\omega}$ 描述速度场的旋度，数值等于局部自旋向量的两倍。
+在简单剪切流中，某些物质线段还会因为 $D$ 的作用而发生方向变化，因此也不能把整个微团任意一条边的角速度直接等同于 $\omega_z/2$。
+### 九、三维速度梯度张量的九个元素，怎样分配给 $D$ 和 $W$？
+现在把之前的所有推导汇总到三维情形。
+原速度梯度张量：
+
+$$
+L=
+\begin{pmatrix}
+u_x&u_y&u_z\\
+v_x&v_y&v_z\\
+w_x&w_y&w_z
+\end{pmatrix}
+$$
+
+对称部分：
+
+$$
+\boxed{
+D=
+\begin{pmatrix}
+u_x&\frac{u_y+v_x}{2}&\frac{u_z+w_x}{2}\\[6pt]
+\frac{v_x+u_y}{2}&v_y&\frac{v_z+w_y}{2}\\[6pt]
+\frac{w_x+u_z}{2}&\frac{w_y+v_z}{2}&w_z
+\end{pmatrix}
+}
+$$
+
+反对称部分：
+
+$$
+\boxed{
+W=
+\frac12
+\begin{pmatrix}
+0&u_y-v_x&u_z-w_x\\
+v_x-u_y&0&v_z-w_y\\
+w_x-u_z&w_y-v_z&0
+\end{pmatrix}
+}
+$$
+
+我们可以对各个分量建立下面的物理对应关系。
+| 分量 | 数学表达式 | 物理解释 |
+| --- | --- | --- |
+| $D_{11}$ | $u_x$ | 沿 $x$ 的相对伸长率 |
+| $D_{22}$ | $v_y$ | 沿 $y$ 的相对伸长率 |
+| $D_{33}$ | $w_z$ | 沿 $z$ 的相对伸长率 |
+| $D_{12}$ | $(u_y+v_x)/2$ | $xy$ 面内剪切应变率的一半 |
+| $D_{13}$ | $(u_z+w_x)/2$ | $xz$ 面内剪切应变率的一半 |
+| $D_{23}$ | $(v_z+w_y)/2$ | $yz$ 面内剪切应变率的一半 |
+| $W_{12}$ | $-\omega_z/2$ | 绕 $z$ 的自旋 |
+| $W_{13}$ | $\omega_y/2$ | 绕 $y$ 的自旋 |
+| $W_{23}$ | $-\omega_x/2$ | 绕 $x$ 的自旋 |
+三维一般速度梯度具有九个独立分量：
+
+$$
+9=\underbrace{6}_{D\text{ 的独立分量}}
++\underbrace{3}_{W\text{ 的独立分量}}
+$$
+
+其中：
+- 对称张量 $D$ 有六个独立分量。
+- 反对称张量 $W$ 有三个独立分量。
+这三个反对称自由度正好对应三维涡度向量的三个分量。
+### 十、为什么散度等于应变率张量的迹？
+流体力学中还有一个极为重要的关系：
+
+$$
+\boxed{
+\nabla\cdot\mathbf u=\operatorname{tr}(D)
+}
+$$
+
+我们从定义推导。
+速度场的散度为：
+
+$$
+\nabla\cdot\mathbf u
+=
+\frac{\partial u}{\partial x}
++
+\frac{\partial v}{\partial y}
++
+\frac{\partial w}{\partial z}
+$$
+
+而：
+
+$$
+\operatorname{tr}(L)
+=
+L_{11}+L_{22}+L_{33}
+$$
+
+所以：
+
+$$
+\operatorname{tr}(L)
+=
+u_x+v_y+w_z
+$$
+
+由于：
+
+$$
+L=D+W
+$$
+
+取迹：
+
+$$
+\operatorname{tr}(L)
+=
+\operatorname{tr}(D)+\operatorname{tr}(W)
+$$
+
+反对称矩阵的对角元素都为零，因此：
+
+$$
+\operatorname{tr}(W)=0
+$$
+
+于是：
+
+$$
+\boxed{
+\operatorname{tr}(D)
+=
+\nabla\cdot\mathbf u
+}
+$$
+
+这意味着流体微团的体积膨胀率与应变率张量的迹直接相关。
+对于不可压缩流体：
+
+$$
+\nabla\cdot\mathbf u=0
+$$
+
+因此：
+
+$$
+\boxed{\operatorname{tr}(D)=0}
+$$
+
+但请注意：
+
+$$
+\operatorname{tr}(D)=0
+$$
+
+并不代表：
+
+$$
+D=0
+$$
+
+例如：
+
+$$
+D=
+\begin{pmatrix}
+2&0\\
+0&-2
+\end{pmatrix}
+$$
+
+其迹为零，但仍然沿 $x$ 方向拉伸、沿 $y$ 方向压缩。
+因此：
+不可压缩意味着流体微团体积不变，并不意味着它的形状不能改变。
+这是理解不可压缩 Navier–Stokes 方程非常重要的物理基础。
+### 十一、从应变率张量推导牛顿流体的黏性应力
+现在将速度梯度分解与前面学过的柯西应力张量联系起来。
+对于不可压缩、各向同性的牛顿流体：
+
+$$
+\boxed{
+\boldsymbol{\sigma}=-pI+2\mu D
+}
+$$
+
+其中：
+- $p$：压力。
+- $I$：单位张量。
+- $\mu$：动力黏度。
+- $D$：应变率张量。
+为什么黏性应力与 $D$ 有关，而不是直接与整个 $L$ 有关？
+考虑纯刚体旋转：
+
+$$
+D=0,\qquad W\neq0
+$$
+
+如果流体仅作刚体旋转，没有局部变形，那么经典牛顿流体不会因为这种刚体旋转本身产生黏性剪切应力。
+这体现了本构关系的客观性要求：叠加刚体运动，不应该凭空改变材料内部的黏性应力。
+因此，黏性应力必须由描述形变率的部分决定，而非将局部自旋部分直接当作黏性形变。
+在三维中：
+
+$$
+2\mu D=
+\mu
+\begin{pmatrix}
+2u_x&u_y+v_x&u_z+w_x\\
+v_x+u_y&2v_y&v_z+w_y\\
+w_x+u_z&w_y+v_z&2w_z
+\end{pmatrix}
+$$
+
+所以，例如：
+
+$$
+\boxed{
+\tau_{xy}=\mu(u_y+v_x)
+}
+$$
+
+这就是牛顿流体剪切应力与速度梯度之间的关系。
+对于常黏度不可压缩流体：
+
+$$
+\nabla\cdot(2\mu D)
+=
+\mu\Delta\mathbf u
+$$
+
+因此 Navier–Stokes 方程中的黏性扩散项，本质上来自应变率张量所决定的黏性应力散度。
+### 十二、最后联系到涡度方程（Vorticity Equation）
+你学习流体 PDE 时，会经常看到 Navier–Stokes 方程被改写为涡度形式。
+对于常密度、常黏度、不可压缩牛顿流体，设：
+
+$$
+\nu=\frac{\mu}{\rho}
+$$
+
+表示运动黏度。
+在单位质量所受的体力可忽略，或者它是保守力的情况下，Navier–Stokes 方程可写成：
+
+$$
+\frac{\partial\mathbf u}{\partial t}
++
+(\mathbf u\cdot\nabla)\mathbf u
+=
+-\frac1\rho\nabla p
++
+\nu\Delta\mathbf u
+$$
+
+两边取旋度：
+
+$$
+\nabla\times
+\left[
+\frac{\partial\mathbf u}{\partial t}
++
+(\mathbf u\cdot\nabla)\mathbf u
+\right]
+=
+\nabla\times
+\left(
+-\frac1\rho\nabla p+\nu\Delta\mathbf u
+\right)
+$$
+
+因为：
+
+$$
+\nabla\times\nabla p=0
+$$
+
+而且：
+
+$$
+\nabla\times\Delta\mathbf u
+=
+\Delta(\nabla\times\mathbf u)
+$$
+
+最终可以推导得到：
+
+$$
+\boxed{
+\frac{\partial\boldsymbol{\omega}}{\partial t}
++
+(\mathbf u\cdot\nabla)\boldsymbol{\omega}
+=
+(\boldsymbol{\omega}\cdot\nabla)\mathbf u
++
+\nu\Delta\boldsymbol{\omega}
+}
+$$
+
+这就是三维不可压缩流体的涡度输运方程。
+现在我们已经知道：
+
+$$
+L=D+W
+$$
+
+因此涡度拉伸项可以继续写成：
+
+$$
+(\boldsymbol{\omega}\cdot\nabla)\mathbf u
+=
+L\boldsymbol{\omega}
+=
+D\boldsymbol{\omega}+W\boldsymbol{\omega}
+$$
+
+由于：
+
+$$
+W\mathbf a=\frac12\boldsymbol{\omega}\times\mathbf a
+$$
+
+令 $\mathbf a=\boldsymbol{\omega}$：
+
+$$
+W\boldsymbol{\omega}
+=
+\frac12\boldsymbol{\omega}\times\boldsymbol{\omega}=0
+$$
+
+于是得到：
+
+$$
+\boxed{
+(\boldsymbol{\omega}\cdot\nabla)\mathbf u
+=
+D\boldsymbol{\omega}
+}
+$$
+
+所以涡度方程还可以写成：
+
+$$
+\boxed{
+\frac{D\boldsymbol{\omega}}{Dt}
+=
+D\boldsymbol{\omega}
++
+\nu\Delta\boldsymbol{\omega}
+}
+$$
+
+这是一个很重要的联系。
+在三维不可压缩流动中，涡度的拉伸、倾斜由应变率张量 $D$ 控制，而局部自旋张量 $W$ 作用于涡度自身时为零。
+这也说明，研究流体中的涡旋结构时，只研究涡度向量本身还不够，应变率场同样重要。
+在严格二维不可压缩流动中，速度和涡度没有 $z$ 方向的空间变化，涡度拉伸项消失，于是：
+
+$$
+\boxed{
+\frac{\partial\omega}{\partial t}
++
+\mathbf u\cdot\nabla\omega
+=
+\nu\Delta\omega
+}
+$$
+
+这里的 $\omega$ 表示二维涡度的 $z$ 分量。
+这也是二维 Navier–Stokes 涡度方程比三维形式简单的关键原因之一。
+### 十三、最终知识结构与公式总结
+速度场
+$\mathbf u(\mathbf x,t)$
+速度梯度张量
+$\displaystyle L_{ij}=\frac{\partial u_i}{\partial x_j}$
+对称部分 $D$
+$\displaystyle\frac{L+L^{\mathsf T}}2$
+拉伸、压缩、剪切、体积变化
+反对称部分 $W$
+$\displaystyle\frac{L-L^{\mathsf T}}2$
+局部刚体式旋转、自旋
+黏性应力
+$\boldsymbol{\tau}=2\mu D$
+涡度
+$\boldsymbol{\omega}=2\boldsymbol{\Omega}$
+对于这部分内容，你至少需要彻底掌握以下六条数学关系：
+| 数学关系 | 物理含义 |
+| --- | --- |
+| $\delta\mathbf u\approx L\delta\mathbf x$ | 位置差产生速度差 |
+| $L=D+W$ | 速度梯度分解 |
+| $\frac{D\ell^2}{Dt}=2\delta\mathbf x^{\mathsf T}D\delta\mathbf x$ | 应变率决定线段长度变化 |
+| $W\mathbf a=\boldsymbol{\Omega}\times\mathbf a$ | 旋转张量对应局部自旋 |
+| $\boldsymbol{\omega}=2\boldsymbol{\Omega}$ | 涡度是局部自旋向量的两倍 |
+| $\operatorname{tr}(D)=\nabla\cdot\mathbf u$ | 应变率的迹表示局部体积变化率 |
+最关键的理解是：速度梯度张量 $L$ 同时包含形变与旋转的信息。$D$ 负责描述瞬时形变，$W$ 负责描述局部刚体式旋转，而涡度是 $W$ 对应的自旋向量的两倍。
+对于你接下来的流体 PDE 学习，一个非常自然的下一步是进一步推导三维涡度方程中的涡度拉伸项 $D\boldsymbol{\omega}$，特别是为什么应变率的特征值和特征向量能够决定局部涡度的增强、减弱与方向变化。这会直接连接到 Navier–Stokes、二维与三维湍流的差异，以及涡度场的生成与演化研究。
+
+## 问题 6：二阶、三阶、四阶张量的表示与缩并
+
+> **我的问题（原文）**
+>
+> 我需要给我展示二阶张量，三阶张量，四阶张量的显示表达与以及张量的合矢已经缩并的计算
+
+**回答**
+
+### 二阶、三阶、四阶张量的展开表示，以及张量的合矢与缩并计算
+
+在张量分析中，最重要的三个运算是：
+
+1. 张量积（Tensor Product）：将低阶张量组合成高阶张量。
+2. 缩并（Contraction）：对两个指标求和，使张量的阶数降低 2。
+3. 张量与向量的乘积或作用：通过指定指标进行求和，通常可以理解为单重缩并。
+
+你提到的“合矢”，我先按照**并矢（Dyadic Product）**来解释，它通常指两个向量的张量积：
+
+$$
+\boxed{\mathbf a\otimes\mathbf b}
+$$
+
+下面统一使用三维欧氏空间的标准正交基：
+
+$$
+\mathbf e_1,\quad\mathbf e_2,\quad\mathbf e_3
+$$
+
+并采用爱因斯坦求和约定：同一项中重复出现的一上一下指标表示求和。在正交归一基底下，我们可以利用欧氏度量升降指标，因此也常见只写下标的工程记法。
+
+### 一、先从零阶、一阶张量开始
+
+#### 1. 零阶张量：标量
+
+例如压力：
+
+$$
+p=100\ \mathrm{Pa}
+$$
+
+只有一个数，没有方向指标。
+
+#### 2. 一阶张量：向量
+
+例如速度向量：
+
+$$
+\mathbf u=u_i\mathbf e_i
+$$
+
+完整展开：
+
+$$
+\boxed{
+\mathbf u=u_1\mathbf e_1+u_2\mathbf e_2+u_3\mathbf e_3
+}
+$$
+
+其列向量表示为：
+
+$$
+[\mathbf u]=
+\begin{pmatrix}
+u_1\\u_2\\u_3
+\end{pmatrix}
+$$
+
+在三维空间中，一阶张量具有 3 个分量。
+
+### 二、二阶张量（Second-Order Tensor）
+
+#### 1. 二阶张量的显式展开
+
+设二阶张量为：
+
+$$
+\boxed{
+\mathbf A=A_{ij}\mathbf e_i\otimes\mathbf e_j
+}
+$$
+
+这里的 $\mathbf e_i\otimes\mathbf e_j$ 称为二阶基张量。
+
+完整展开共有九项：
+
+$$
+\begin{aligned}
+\mathbf A={}&
+A_{11}\mathbf e_1\otimes\mathbf e_1
++A_{12}\mathbf e_1\otimes\mathbf e_2
++A_{13}\mathbf e_1\otimes\mathbf e_3\\
+&+A_{21}\mathbf e_2\otimes\mathbf e_1
++A_{22}\mathbf e_2\otimes\mathbf e_2
++A_{23}\mathbf e_2\otimes\mathbf e_3\\
+&+A_{31}\mathbf e_3\otimes\mathbf e_1
++A_{32}\mathbf e_3\otimes\mathbf e_2
++A_{33}\mathbf e_3\otimes\mathbf e_3
+\end{aligned}
+$$
+
+在选定基底下，可以排列成一个 $3\times3$ 矩阵：
+
+$$
+\boxed{
+[A]=
+\begin{pmatrix}
+A_{11}&A_{12}&A_{13}\\
+A_{21}&A_{22}&A_{23}\\
+A_{31}&A_{32}&A_{33}
+\end{pmatrix}
+}
+$$
+
+![二阶张量的矩阵表示与行列指标](/images/fluid-mechanics/tensors/second-order-matrix.svg)
+
+$$
+A=
+\begin{pmatrix}
+1&2&3\\
+4&5&6\\
+7&8&9
+\end{pmatrix}
+$$
+
+这是一个二阶张量在给定正交基底下可能具有的分量矩阵。
+
+#### 2. 两个向量的并矢：产生二阶张量
+
+令：
+
+$$
+\mathbf a=
+\begin{pmatrix}1\\2\\3\end{pmatrix},
+\qquad
+\mathbf b=
+\begin{pmatrix}4\\5\\6\end{pmatrix}
+$$
+
+其并矢定义为：
+
+$$
+\boxed{
+\mathbf a\otimes\mathbf b
+=
+a_i b_j\mathbf e_i\otimes\mathbf e_j
+}
+$$
+
+在标准正交基底中，其分量矩阵就是列向量和行向量的外积：
+
+$$
+\mathbf a\otimes\mathbf b
+=
+\begin{pmatrix}1\\2\\3\end{pmatrix}
+\begin{pmatrix}4&5&6\end{pmatrix}
+$$
+
+得到：
+
+$$
+\boxed{
+\mathbf a\otimes\mathbf b=
+\begin{pmatrix}
+4&5&6\\
+8&10&12\\
+12&15&18
+\end{pmatrix}
+}
+$$
+
+注意：
+
+$$
+(\mathbf a\otimes\mathbf b)_{ij}=a_i b_j
+$$
+
+这里没有求和，因为 $i,j$ 是两个自由指标。
+
+##### 并矢与点积有何区别？
+
+$$
+\mathbf a\cdot\mathbf b=a_i b_i=32
+$$
+
+点积的输出是一个标量。
+
+而：
+
+$$
+\mathbf a\otimes\mathbf b
+$$
+
+输出的是一个二阶张量。
+
+因此：
+
+$$
+\boxed{
+\begin{aligned}
+\text{点积：}&\quad 1+1\to0\text{ 阶}\\
+\text{并矢：}&\quad 1+1\to2\text{ 阶}
+\end{aligned}
+}
+$$
+
+这里的阶数变化是指最终结果的张量阶数。
+
+### 三、三阶张量（Third-Order Tensor）
+
+三阶张量需要三个指标：
+
+$$
+\boxed{
+\mathcal T=T_{ijk}\mathbf e_i\otimes\mathbf e_j\otimes\mathbf e_k
+}
+$$
+
+其中：
+
+$$
+i,j,k=1,2,3
+$$
+
+所以共有：
+
+$$
+\boxed{3^3=27}
+$$
+
+个分量。
+
+#### 1. 三阶张量如何显示？
+
+二阶张量可以用一个矩阵显示，而三阶张量可以表示为三个 $3\times3$ 矩阵构成的数组。
+
+我们固定第三个指标 $k$。
+
+![三阶张量的三个矩阵切片](/images/fluid-mechanics/tensors/third-order-slices.svg)
+
+$$
+T_{::1}=
+\begin{pmatrix}
+T_{111}&T_{121}&T_{131}\\
+T_{211}&T_{221}&T_{231}\\
+T_{311}&T_{321}&T_{331}
+\end{pmatrix}
+$$
+
+固定 $k=2$：
+
+$$
+T_{::2}=
+\begin{pmatrix}
+T_{112}&T_{122}&T_{132}\\
+T_{212}&T_{222}&T_{232}\\
+T_{312}&T_{322}&T_{332}
+\end{pmatrix}
+$$
+
+固定 $k=3$：
+
+$$
+T_{::3}=
+\begin{pmatrix}
+T_{113}&T_{123}&T_{133}\\
+T_{213}&T_{223}&T_{233}\\
+T_{313}&T_{323}&T_{333}
+\end{pmatrix}
+$$
+
+于是：
+
+$$
+\boxed{
+\mathcal T=[T_{::1},T_{::2},T_{::3}]
+}
+$$
+
+这是一种切片记法，具体把哪一个指标作为切片轴可以自行约定，但必须保持一致。
+
+#### 2. 三个向量的张量积
+
+设：
+
+$$
+\mathbf a=(a_1,a_2,a_3)
+$$
+
+$$
+\mathbf b=(b_1,b_2,b_3)
+$$
+
+$$
+\mathbf c=(c_1,c_2,c_3)
+$$
+
+那么：
+
+$$
+\boxed{
+\mathcal T=\mathbf a\otimes\mathbf b\otimes\mathbf c
+}
+$$
+
+其分量为：
+
+$$
+\boxed{T_{ijk}=a_i b_j c_k}
+$$
+
+注意没有任何重复求和指标。
+
+例如取：
+
+$$
+\mathbf a=
+\begin{pmatrix}1\\2\end{pmatrix},
+\quad
+\mathbf b=
+\begin{pmatrix}3\\4\end{pmatrix},
+\quad
+\mathbf c=
+\begin{pmatrix}5\\6\end{pmatrix}
+$$
+
+在二维空间，这产生一个 $2\times2\times2$ 三阶张量，共有 8 个分量。
+
+固定 $k=1$：
+
+$$
+T_{::1}=
+\begin{pmatrix}
+1\cdot3\cdot5&1\cdot4\cdot5\\
+2\cdot3\cdot5&2\cdot4\cdot5
+\end{pmatrix}
+=
+\boxed{
+\begin{pmatrix}
+15&20\\30&40
+\end{pmatrix}
+}
+$$
+
+固定 $k=2$：
+
+$$
+T_{::2}=
+\boxed{
+\begin{pmatrix}
+18&24\\36&48
+\end{pmatrix}
+}
+$$
+
+这就是三阶张量从向量并矢构造出来的具体过程。
+
+### 四、四阶张量（Fourth-Order Tensor）
+
+四阶张量具有四个指标：
+
+$$
+\boxed{
+\mathcal C=C_{ijkl}\,
+\mathbf e_i\otimes\mathbf e_j\otimes\mathbf e_k\otimes\mathbf e_l
+}
+$$
+
+在三维空间中：
+
+$$
+i,j,k,l=1,2,3
+$$
+
+共有：
+
+$$
+\boxed{3^4=81}
+$$
+
+个分量位置。
+
+#### 1. 四阶张量如何显示？
+
+![四阶张量的九个矩阵块](/images/fluid-mechanics/tensors/fourth-order-blocks.svg)
+
+<TensorCalculations mode="slices" client:visible />
+
+> 两种分块约定：上图和交互组件固定后两个指标，展示 $C_{::kl}$，块内行列为 $i,j$。下面的公式则固定前两个指标，展示 $C_{ij::}$，块内行列为 $k,l$。两种方法都能完整展示同一个四阶张量，但块的位置与块内的指标含义不同，不能混用。
+
+四阶张量不再适合直接画成一个普通立方体。
+
+最常用的方法是将它表示为一个 $3\times3$ 的矩阵块阵列，每个块又是一个 $3\times3$ 矩阵。
+
+例如固定前两个指标 $i,j$，定义：
+
+$$
+C_{ij::}=
+\begin{pmatrix}
+C_{ij11}&C_{ij12}&C_{ij13}\\
+C_{ij21}&C_{ij22}&C_{ij23}\\
+C_{ij31}&C_{ij32}&C_{ij33}
+\end{pmatrix}
+$$
+
+于是整个四阶张量可以形式化地排成：
+
+$$
+\boxed{
+\mathcal C=
+\begin{pmatrix}
+C_{11::}&C_{12::}&C_{13::}\\
+C_{21::}&C_{22::}&C_{23::}\\
+C_{31::}&C_{32::}&C_{33::}
+\end{pmatrix}
+}
+$$
+
+注意：这里每个 $C_{ij::}$ 本身都是 $3\times3$ 矩阵。
+
+#### 2. 四阶张量的具体例子
+
+在固体力学以及具有复杂本构关系的连续介质中，四阶张量经常用来建立两个二阶张量之间的线性关系：
+
+$$
+\boxed{
+\sigma_{ij}=C_{ijkl}\varepsilon_{kl}
+}
+$$
+
+这里：
+
+- $C_{ijkl}$：四阶弹性张量。
+- $\varepsilon_{kl}$：二阶应变张量。
+- $\sigma_{ij}$：二阶应力张量。
+
+由于 $k,l$ 是重复指标，所以需要对它们求和：
+
+$$
+\sigma_{ij}
+=
+\sum_{k=1}^{3}\sum_{l=1}^{3}
+C_{ijkl}\varepsilon_{kl}
+$$
+
+也就是：
+
+$$
+\begin{aligned}
+\sigma_{ij}={}&
+C_{ij11}\varepsilon_{11}
++C_{ij12}\varepsilon_{12}
++C_{ij13}\varepsilon_{13}\\
+&+C_{ij21}\varepsilon_{21}
++C_{ij22}\varepsilon_{22}
++C_{ij23}\varepsilon_{23}\\
+&+C_{ij31}\varepsilon_{31}
++C_{ij32}\varepsilon_{32}
++C_{ij33}\varepsilon_{33}
+\end{aligned}
+$$
+
+你会发现：一个四阶张量通过两个指标的求和，最终得到一个二阶张量。
+
+这个运算称为双重缩并（Double Contraction）。
+
+### 五、什么是张量缩并？
+
+缩并（Contraction）是张量计算中最重要的运算之一。
+
+它的思想是：
+
+选择张量中一个逆变指标和一个协变指标，将它们设为相同的求和指标，然后对该指标求和。
+
+对于纯欧氏正交坐标中的工程记法，经常把所有指标都写成下标。这时缩并实际上隐含了欧氏度量的使用。
+
+一次缩并消去两个指标位置，因此：
+
+$$
+\boxed{
+k\text{ 阶张量}
+\overset{\text{缩并一次}}{\longrightarrow}
+(k-2)\text{ 阶张量}
+}
+$$
+
+例如：
+
+$$
+T^i_{\ i}
+$$
+
+表示对指标 $i$ 求和，结果是标量。
+
+#### 1. 二阶张量缩并成标量
+
+设：
+
+$$
+A=
+\begin{pmatrix}
+1&2&3\\
+4&5&6\\
+7&8&9
+\end{pmatrix}
+$$
+
+对两个指标缩并：
+
+$$
+A^i_{\ i}=\sum_{i=1}^3 A^i_{\ i}
+$$
+
+在标准正交基底下，就是矩阵的迹：
+
+$$
+\boxed{
+\operatorname{tr}(A)=A_{11}+A_{22}+A_{33}
+}
+$$
+
+代入：
+
+$$
+\boxed{
+\operatorname{tr}(A)=1+5+9=15
+}
+$$
+
+其张量阶数变化为：
+
+$$
+\boxed{2\longrightarrow0}
+$$
+
+流体力学中的一个重要应用是：
+
+$$
+\boxed{\operatorname{tr}(D)=\nabla\cdot\mathbf u}
+$$
+
+即应变率张量的迹等于速度场的散度。
+
+#### 2. 三阶张量缩并成一阶张量
+
+考虑三阶张量：
+
+$$
+T^i_{\ jk}
+$$
+
+选择第一个和第二个指标缩并：
+
+$$
+\boxed{
+v_k=T^i_{\ ik}
+}
+$$
+
+完整求和：
+
+$$
+v_k=T^1_{\ 1k}+T^2_{\ 2k}+T^3_{\ 3k}
+$$
+
+由于 $k$ 没有被求和，因此它是自由指标，取值为 $1,2,3$。
+
+于是：
+
+$$
+v_1=T^1_{\ 11}+T^2_{\ 21}+T^3_{\ 31}
+$$
+
+$$
+v_2=T^1_{\ 12}+T^2_{\ 22}+T^3_{\ 32}
+$$
+
+$$
+v_3=T^1_{\ 13}+T^2_{\ 23}+T^3_{\ 33}
+$$
+
+所以结果是：
+
+$$
+\boxed{
+\mathbf v=
+\begin{pmatrix}
+T^1_{\ 11}+T^2_{\ 21}+T^3_{\ 31}\\
+T^1_{\ 12}+T^2_{\ 22}+T^3_{\ 32}\\
+T^1_{\ 13}+T^2_{\ 23}+T^3_{\ 33}
+\end{pmatrix}
+}
+$$
+
+其阶数变化为：
+
+$$
+\boxed{3\longrightarrow1}
+$$
+
+##### 数值计算示例
+
+设一个三维三阶张量的分量满足：
+
+$$
+T^i_{\ jk}=i+j+k
+$$
+
+其中 $i,j,k\in\{1,2,3\}$，右边的整数是分量的取值规则，并非张量指标运算本身。
+
+计算：
+
+$$
+v_k=T^i_{\ ik}
+$$
+
+由于：
+
+$$
+T^i_{\ ik}=i+i+k=2i+k
+$$
+
+所以：
+
+$$
+v_k=\sum_{i=1}^{3}(2i+k)
+$$
+
+展开：
+
+$$
+v_k=(2+k)+(4+k)+(6+k)
+$$
+
+得到：
+
+$$
+v_k=12+3k
+$$
+
+因此：
+
+$$
+\boxed{
+\mathbf v=
+\begin{pmatrix}
+15\\18\\21
+\end{pmatrix}
+}
+$$
+
+需要注意，这个例子是在固定基底下人为指定分量数值，并对分量做缩并。换基后要使用正确的张量变换律，而不能继续把新分量机械地定义为指标数字之和。
+
+### 六、四阶张量的单重缩并与双重缩并
+
+这是高阶张量计算的重点。
+
+#### 1. 四阶张量单重缩并
+
+设：
+
+$$
+C^{i}_{\ jkl}
+$$
+
+将 $i,j$ 缩并：
+
+$$
+\boxed{
+B_{kl}=C^i_{\ ikl}
+}
+$$
+
+即：
+
+$$
+B_{kl}
+=
+\sum_{i=1}^3 C^i_{\ ikl}
+$$
+
+具体展开：
+
+$$
+\boxed{
+B_{kl}
+=
+C^1_{\ 1kl}
++
+C^2_{\ 2kl}
++
+C^3_{\ 3kl}
+}
+$$
+
+因为还剩两个自由指标 $k,l$，结果是一个二阶张量。
+
+阶数变化：
+
+$$
+\boxed{4\longrightarrow2}
+$$
+
+#### 2. 四阶张量双重缩并成标量
+
+设：
+
+$$
+C^{ij}_{\ \ kl}
+$$
+
+先对 $i,k$ 缩并，再对 $j,l$ 缩并：
+
+$$
+\boxed{
+s=C^{ij}_{\ \ ij}
+}
+$$
+
+即：
+
+$$
+s=\sum_{i=1}^3\sum_{j=1}^3 C^{ij}_{\ \ ij}
+$$
+
+完整展开为九项：
+
+$$
+\begin{aligned}
+s={}&C^{11}_{\ \ 11}+C^{12}_{\ \ 12}+C^{13}_{\ \ 13}\\
+&+C^{21}_{\ \ 21}+C^{22}_{\ \ 22}+C^{23}_{\ \ 23}\\
+&+C^{31}_{\ \ 31}+C^{32}_{\ \ 32}+C^{33}_{\ \ 33}
+\end{aligned}
+$$
+
+这里虽然四阶张量有 $81$ 个分量位置，但这种指定的双重缩并只选取其中满足对应指标相等的九个分量进行求和。
+
+其阶数变化为：
+
+$$
+\boxed{4\longrightarrow2\longrightarrow0}
+$$
+
+### 七、两个不同张量之间的缩并
+
+前面是在同一个张量内部缩并指标。
+
+实际 PDE 和流体力学中，更常见的是先做张量积，再对来自不同因子的指标求和。
+
+#### 1. 二阶张量与向量的乘积
+
+设：
+
+$$
+A=
+\begin{pmatrix}
+1&2&3\\
+4&5&6\\
+7&8&9
+\end{pmatrix}
+$$
+
+$$
+\mathbf v=
+\begin{pmatrix}
+1\\2\\3
+\end{pmatrix}
+$$
+
+矩阵作用于向量：
+
+$$
+\mathbf w=A\mathbf v
+$$
+
+指标形式：
+
+$$
+\boxed{w_i=A_{ij}v_j}
+$$
+
+在笛卡尔正交基底中，展开为：
+
+$$
+w_1=A_{11}v_1+A_{12}v_2+A_{13}v_3
+$$
+
+$$
+w_2=A_{21}v_1+A_{22}v_2+A_{23}v_3
+$$
+
+$$
+w_3=A_{31}v_1+A_{32}v_2+A_{33}v_3
+$$
+
+计算：
+
+$$
+\mathbf w=
+\begin{pmatrix}
+1(1)+2(2)+3(3)\\
+4(1)+5(2)+6(3)\\
+7(1)+8(2)+9(3)
+\end{pmatrix}
+$$
+
+最终：
+
+$$
+\boxed{
+\mathbf w=
+\begin{pmatrix}
+14\\32\\50
+\end{pmatrix}
+}
+$$
+
+阶数关系为：
+
+$$
+\boxed{2+1-2=1}
+$$
+
+这是一次缩并。
+
+流体力学中：
+
+$$
+\boxed{\mathbf t=\boldsymbol{\sigma}\mathbf n}
+$$
+
+就是同类的运算。
+
+#### 2. 两个二阶张量的单重缩并
+
+设：
+
+$$
+A_{ij},\qquad B_{jk}
+$$
+
+定义：
+
+$$
+\boxed{
+C_{ik}=A_{ij}B_{jk}
+}
+$$
+
+这就是矩阵乘法：
+
+$$
+\boxed{C=AB}
+$$
+
+阶数变化：
+
+$$
+\boxed{2+2-2=2}
+$$
+
+注意矩阵乘法一般不满足交换律：
+
+$$
+AB\neq BA
+$$
+
+因此，缩并哪些指标以及指标的先后顺序非常重要。
+
+#### 3. 两个二阶张量的双重缩并
+
+定义双点积：
+
+$$
+\boxed{
+A:B=A_{ij}B_{ij}
+}
+$$
+
+这是正交归一基底下的写法；一般基底下需要通过度量正确配对上下指标。
+
+在矩阵形式中：
+
+$$
+\boxed{A:B=\operatorname{tr}(A^{\mathsf T}B)}
+$$
+
+假设：
+
+$$
+A=
+\begin{pmatrix}
+1&2\\
+3&4
+\end{pmatrix}
+$$
+
+$$
+B=
+\begin{pmatrix}
+5&6\\
+7&8
+\end{pmatrix}
+$$
+
+则：
+
+$$
+A:B=1(5)+2(6)+3(7)+4(8)
+$$
+
+得到：
+
+$$
+\boxed{A:B=70}
+$$
+
+它是一个标量。
+
+阶数变化：
+
+$$
+\boxed{2+2-4=0}
+$$
+
+双重缩并不是普通矩阵乘法。
+
+区别在于：
+
+$$
+AB\rightarrow\text{二阶张量}
+$$
+
+$$
+A:B\rightarrow\text{标量}
+$$
+
+对于任意非对称矩阵，一定要注意：
+
+$$
+A:B=\operatorname{tr}(A^{\mathsf T}B)
+$$
+
+而不是一般情况下的 $\operatorname{tr}(AB)$。
+
+#### 4. 四阶张量与二阶张量的双重缩并
+
+考虑：
+
+$$
+\boxed{
+B_{ij}=C_{ijkl}A_{kl}
+}
+$$
+
+这里对 $k,l$ 进行两重求和：
+
+$$
+B_{ij}
+=
+\sum_{k=1}^3\sum_{l=1}^3
+C_{ijkl}A_{kl}
+$$
+
+因为 $i,j$ 是自由指标，结果仍然为二阶张量。
+
+阶数变化：
+
+$$
+\boxed{4+2-4=2}
+$$
+
+这正是各向异性本构关系中的常见形式：
+
+$$
+\boxed{
+\boldsymbol{\sigma}
+=
+\mathcal C:\boldsymbol{\varepsilon}
+}
+$$
+
+例如：
+
+$$
+\sigma_{ij}=C_{ijkl}\varepsilon_{kl}
+$$
+
+这是四阶弹性张量作用于二阶应变张量后产生二阶应力张量。
+
+### 八、交互计算：张量积与缩并到底改变了什么？
+
+以下演示逐项列出乘法、求和和结果阶数，可以选择不同运算。
+
+<TensorCalculations mode="operations" client:visible />
+
+### 九、所有运算的阶数规律
+在三维空间中：
+| 运算 | 指标表示 | 结果阶数 |
+| --- | --- | --- |
+| 向量并矢 | $a_i b_j$ | 二阶 |
+| 三向量张量积 | $a_i b_j c_k$ | 三阶 |
+| 二阶张量缩并 | $A^i_{\ i}$ | 零阶 |
+| 三阶张量缩并 | $T^i_{\ ik}$ | 一阶 |
+| 四阶张量单重缩并 | $C^i_{\ ikl}$ | 二阶 |
+| 二阶张量作用于向量 | $A^i_{\ j}v^j$ | 一阶 |
+| 二阶张量之间单重缩并 | $A^i_{\ j}B^j_{\ k}$ | 二阶 |
+| 两个二阶张量双重缩并 | $A_{ij}B^{ij}$ | 零阶 |
+| 四阶与二阶张量双重缩并 | $C_{ijkl}A^{kl}$ | 二阶 |
+总结成一个通用公式：
+
+$$
+\boxed{
+\text{结果阶数}
+=
+\text{参与张量的阶数之和}
+-
+2\times\text{缩并次数}
+}
+$$
+
+例如：
+
+$$
+4+2-2\times2=2
+$$
+
+因此，四阶张量与二阶张量进行双重缩并，得到二阶张量。
+注意，所谓“缩并次数”指独立求和的指标对数。每一对都必须使用合法的上下指标配对，或者通过度量完成相应配对。
+### 十、在 PDE 和流体力学中如何使用？
+最后将这些运算与你学过的流体力学公式对应起来。
+#### 1. 应力张量作用于法向量
+
+$$
+\boxed{
+t_i=\sigma_{ij}n_j
+}
+$$
+
+在标准正交基底中，是二阶张量和一阶向量的单重缩并。
+输出：牵引力向量。
+#### 2. 速度梯度的缩并
+
+$$
+\boxed{
+\partial_i u_i=\nabla\cdot\mathbf u
+}
+$$
+
+这是速度梯度的迹。
+输出：标量，描述局部体积膨胀率。
+#### 3. 应力张量的散度
+
+$$
+\boxed{
+f_i=\partial_j\sigma_{ij}
+}
+$$
+
+这是先对张量的分量求空间导数，再进行指标缩并。
+因为求导使分量多出一个空间指标，之后缩并一个指标对，最终保留一个自由指标 $i$。
+输出：单位体积净表面力向量。
+#### 4. 应变率张量的二次不变量
+
+$$
+\boxed{
+D:D=D_{ij}D_{ij}
+}
+$$
+
+这是两个二阶张量的双重缩并。
+在欧氏正交基底下：
+
+$$
+D:D=\sum_{i,j}D_{ij}^2
+$$
+
+它是一个非负标量，经常用于描述流体的局部变形强度。
+对于不可压缩牛顿流体，黏性耗散率（单位体积、单位时间）为：
+
+$$
+\boxed{
+\Phi=2\mu D:D
+}
+$$
+
+这里的 $D:D$ 正是张量双重缩并的物理应用。
+#### 5. 四阶张量如何表示牛顿流体的黏性本构关系？
+对于不可压缩牛顿流体：
+
+$$
+\tau_{ij}=2\mu D_{ij}
+$$
+
+也可以引入四阶黏性张量：
+
+$$
+\boxed{
+\mathcal C_{ijkl}
+=
+\mu(\delta_{ik}\delta_{jl}+\delta_{il}\delta_{jk})
+}
+$$
+
+于是：
+
+$$
+\tau_{ij}=\mathcal C_{ijkl}D_{kl}
+$$
+
+展开：
+
+$$
+\begin{aligned}
+\tau_{ij}
+&=\mu(\delta_{ik}\delta_{jl}+\delta_{il}\delta_{jk})D_{kl}\\
+&=\mu(D_{ij}+D_{ji})
+\end{aligned}
+$$
+
+由于：
+
+$$
+D_{ij}=D_{ji}
+$$
+
+所以：
+
+$$
+\boxed{\tau_{ij}=2\mu D_{ij}}
+$$
+
+这说明，四阶张量不仅存在于固体力学中，也可以用来表达流体黏性应力与应变率之间的线性关系。
+#### 十一、最终总结
+不同阶数张量在三维空间的分量规模：二阶 $3^2=9$，三阶 $3^3=27$，四阶 $3^4=81$。
+
+有三个结论最值得记住：
+第一，张量积增加阶数。
+
+$$
+\begin{gathered}
+\mathbf a\otimes\mathbf b\to\text{二阶张量}\\
+\mathbf a\otimes\mathbf b\otimes\mathbf c\to\text{三阶张量}
+\end{gathered}
+$$
+
+第二，每缩并一个指标对，总阶数降低 2。
+
+$$
+\begin{gathered}
+T^i_{\ ik}\to v_k\\
+C_{ijkl}A^{kl}\to B_{ij}
+\end{gathered}
+$$
+
+第三，指标的排列顺序和缩并位置决定计算结果。
+
+$$
+A_{ij}B_{jk}
+$$
+
+与：
+
+$$
+A_{ij}B_{ij}
+$$
+
+并不是相同的运算：前者是矩阵乘法，后者是双重缩并。
+如果你接下来继续研究 PDE、连续介质力学和 CFD，最需要熟练掌握的是张量积、指标缩并、张量散度以及四阶本构张量与二阶张量的双重缩并。这四类运算几乎贯穿了应力分析、动量守恒、本构方程与数值离散方法。
+
+## 问题 7：张量运算、微分与四阶本构关系
+
+> **我的问题（原文）**
+>
+> 现在我需要知道张量的计算以及很多的其他的性质，然后告诉我张量积、指标缩并、张量散度以及四阶本构张量与二阶张量的双重缩并这些
+
+**回答**
+
+### 张量分析与计算：从基础运算到 PDE、流体力学和四阶本构张量
+
+你现在已经接触过速度梯度张量 $L$、应变率张量 $D$、旋转张量 $W$、柯西应力张量 $\boldsymbol{\sigma}$。接下来需要建立一套完整的张量计算体系，让你能够真正读懂和推导含有 $T_{ijk}$、$C_{ijkl}$、$\nabla\cdot\boldsymbol{\sigma}$ 以及 $\mathcal C:D$ 的公式。
+
+我会重点回答五个问题：
+
+1. 张量有哪些基本运算和代数性质？
+2. 张量积 $\otimes$ 如何计算？为什么它会增加张量阶数？
+3. 指标缩并如何计算？自由指标和哑指标如何区分？
+4. 张量的梯度、散度、双重散度与 Laplace 算子是什么关系？
+5. 四阶本构张量如何与二阶张量进行双重缩并？它在牛顿流体中如何出现？
+
+整套讲解使用三维欧氏空间。除非特别说明，都选取笛卡尔正交归一基底，这样可以先掌握矩阵计算，不必一开始就引入复杂的曲线坐标。
+
+### 一、建立统一的张量数学语言
+
+#### 1. 张量的阶数与分量
+
+一个 $r$ 阶张量可以在选定基底下写成：
+
+$$
+\boxed{
+T=T_{i_1\cdots i_r}
+\mathbf e_{i_1}\otimes\cdots\otimes\mathbf e_{i_r}
+}
+$$
+
+这里使用了欧氏度量识别向量与协向量的简写。严格区分类型时，例如一个 $(2,0)$ 张量写成 $T^{ij}\mathbf e_i\otimes\mathbf e_j$，而 $(0,2)$ 张量应当用对偶基表示。
+
+| 张量阶数 | 分量 | 三维分量位置数 | 典型对象 |
+| --- | --- | --- | --- |
+| 0 | $a$ | 1 | 压力、温度 |
+| 1 | $a_i$ | 3 | 速度、力 |
+| 2 | $A_{ij}$ | 9 | 应力、应变率 |
+| 3 | $T_{ijk}$ | 27 | 二阶张量的梯度 |
+| 4 | $C_{ijkl}$ | 81 | 弹性、黏性本构张量 |
+
+这里的 9、27、81 是分量位置数量，不代表有这么多个独立自由度。如果张量满足对称性，独立分量会减少。
+
+#### 2. 理解爱因斯坦求和约定
+
+例如：
+
+$$
+a_i b_i
+$$
+
+表示：
+
+$$
+\sum_{i=1}^3a_i b_i
+=a_1b_1+a_2b_2+a_3b_3
+$$
+
+严格的抽象张量记法通常写为：
+
+$$
+a_i b^i
+$$
+
+在欧氏正交基底中，通过度量升降指标以后，前面两种分量计算在数值上相同。
+
+##### 两种指标必须区分
+
+自由指标（Free Index）：在一个表达式的每一项中出现一次，决定结果有哪些分量。
+
+哑指标（Dummy Index）：被缩并求和的指标，其具体字母可以重命名。
+
+例如：
+
+$$
+c_i=A_{ij}b_j
+$$
+
+其中：
+
+- $i$ 是自由指标。
+- $j$ 是求和指标。
+
+完整展开：
+
+$$
+c_1=A_{11}b_1+A_{12}b_2+A_{13}b_3
+$$
+
+$$
+c_2=A_{21}b_1+A_{22}b_2+A_{23}b_3
+$$
+
+$$
+c_3=A_{31}b_1+A_{32}b_2+A_{33}b_3
+$$
+
+而：
+
+$$
+A_{ij}b_j=A_{ik}b_k
+$$
+
+只是把求和指标从 $j$ 改名成 $k$，两个表达式相同。
+
+但：
+
+$$
+A_{ij}b_j
+\quad\text{与}\quad
+A_{ij}b_i
+$$
+
+一般不相同，因为前者保留 $i$，后者保留 $j$，对应的矩阵作用方向不同。
+
+一个简单的检验方法：等式左右两边的自由指标必须一致。
+
+例如：
+
+$$
+c_i=A_{ij}b_j
+$$
+
+是合法的指标等式，而：
+
+$$
+c_i=A_{ij}b_k
+$$
+
+如果没有额外说明，就不能按照预期解释为矩阵乘法。
+
+### 二、张量的基础代数运算及性质
+
+#### 1. 张量加法与数乘
+
+两个相同类型的张量可以相加。
+
+例如：
+
+$$
+A=
+\begin{pmatrix}
+1&2\\3&4
+\end{pmatrix},
+\qquad
+B=
+\begin{pmatrix}
+5&6\\7&8
+\end{pmatrix}
+$$
+
+则：
+
+$$
+A+B=
+\begin{pmatrix}
+6&8\\10&12
+\end{pmatrix}
+$$
+
+指标形式为：
+
+$$
+(A+B)_{ij}=A_{ij}+B_{ij}
+$$
+
+数乘为：
+
+$$
+(\lambda A)_{ij}=\lambda A_{ij}
+$$
+
+但不能直接将不同类型的张量相加，例如一个普通向量和一个二阶应力张量就不能直接相加。
+
+#### 2. 二阶张量的转置
+
+定义：
+
+$$
+\boxed{(A^{\mathsf T})_{ij}=A_{ji}}
+$$
+
+例如：
+
+$$
+A=
+\begin{pmatrix}
+1&2\\3&4
+\end{pmatrix}
+$$
+
+则：
+
+$$
+A^{\mathsf T}=
+\begin{pmatrix}
+1&3\\2&4
+\end{pmatrix}
+$$
+
+重要性质：
+
+$$
+(A+B)^{\mathsf T}=A^{\mathsf T}+B^{\mathsf T}
+$$
+
+$$
+(AB)^{\mathsf T}=B^{\mathsf T}A^{\mathsf T}
+$$
+
+注意乘积转置时，顺序需要反过来。
+
+#### 3. 对称与反对称分解
+
+对于任意二阶张量矩阵 $A$：
+
+$$
+\boxed{
+A=\underbrace{\frac12(A+A^{\mathsf T})}_{\operatorname{sym}A}
++
+\underbrace{\frac12(A-A^{\mathsf T})}_{\operatorname{skew}A}
+}
+$$
+
+这两个部分分别满足：
+
+$$
+(\operatorname{sym}A)^{\mathsf T}=\operatorname{sym}A
+$$
+
+$$
+(\operatorname{skew}A)^{\mathsf T}=-\operatorname{skew}A
+$$
+
+在流体力学中，速度梯度分解：
+
+$$
+L=D+W
+$$
+
+就是这个代数定理的具体应用。
+
+并且对称张量 $D$ 与反对称张量 $W$ 在 Frobenius 内积下正交：
+
+$$
+\boxed{D:W=0}
+$$
+
+原因是：
+
+$$
+D:W=D_{ij}W_{ij}
+$$
+
+交换 $i,j$：
+
+$$
+D_{ji}W_{ji}
+=
+D_{ij}(-W_{ij})
+$$
+
+所以这一标量等于它自己的相反数，只能为零。
+
+#### 4. 迹、行列式、特征值与不变量
+
+对于二阶张量矩阵：
+
+$$
+\boxed{\operatorname{tr}A=A_{ii}}
+$$
+
+在正交基底下，还可以研究：
+
+$$
+\det A,\qquad A\mathbf v=\lambda\mathbf v
+$$
+
+以及：
+
+$$
+\boxed{A:A=\sum_{i,j}A_{ij}^2}
+$$
+
+其中 $A:A$ 称为 Frobenius 范数的平方。
+
+对于正交变换：
+
+$$
+A'=Q^{\mathsf T}AQ
+$$
+
+有：
+
+$$
+\operatorname{tr}A'=\operatorname{tr}A
+$$
+
+$$
+\det A'=\det A
+$$
+
+$$
+A':A'=A:A
+$$
+
+特征值也保持不变。
+
+需要注意：这些相似变换不变量的说法适用于对应的线性算子表示以及正交旋转。对一般非正交坐标中的纯协变张量分量矩阵，不能直接把普通矩阵迹和特征值都视作张量不变量。
+
+#### 5. 单位张量与克罗内克符号
+
+定义：
+
+$$
+\delta_{ij}=
+\begin{cases}
+1,&i=j,\\
+0,&i\neq j
+\end{cases}
+$$
+
+在标准正交基底下：
+
+$$
+I=
+\begin{pmatrix}
+1&0&0\\
+0&1&0\\
+0&0&1
+\end{pmatrix}
+$$
+
+它有一个非常重要的筛选作用：
+
+$$
+\boxed{\delta_{ij}a_j=a_i}
+$$
+
+以及：
+
+$$
+\boxed{\delta_{ik}A_{kj}=A_{ij}}
+$$
+
+也就是说，缩并一个单位张量，相当于保留对应的分量。
+
+这一性质在四阶本构张量计算中会反复使用。
+
+### 三、张量积（Tensor Product）：为什么阶数会增加？
+
+张量积是构造高阶张量的基础。
+
+记作：
+
+$$
+\boxed{A\otimes B}
+$$
+
+如果 $A$ 是 $p$ 阶张量，$B$ 是 $q$ 阶张量，那么：
+
+$$
+\boxed{\operatorname{order}(A\otimes B)=p+q}
+$$
+
+这里的 $\otimes$ 不代表普通矩阵乘法。
+
+#### 1. 两个向量的张量积
+
+假设：
+
+$$
+\mathbf a=
+\begin{pmatrix}1\\2\end{pmatrix},
+\qquad
+\mathbf b=
+\begin{pmatrix}3\\4\end{pmatrix}
+$$
+
+张量积：
+
+$$
+\mathbf a\otimes\mathbf b
+$$
+
+在二维笛卡尔坐标中的分量为：
+
+$$
+(\mathbf a\otimes\mathbf b)_{ij}=a_i b_j
+$$
+
+于是：
+
+$$
+\mathbf a\otimes\mathbf b
+=
+\begin{pmatrix}
+1\cdot3&1\cdot4\\
+2\cdot3&2\cdot4
+\end{pmatrix}
+$$
+
+所以：
+
+$$
+\boxed{
+\mathbf a\otimes\mathbf b=
+\begin{pmatrix}
+3&4\\6&8
+\end{pmatrix}
+}
+$$
+
+这称为两个向量的并矢（Dyadic Product），也常称外积（Outer Product）。
+
+要注意，“外积”在不同教材中有时也指外代数的楔积 $\wedge$，因此最准确的记号是 $\otimes$。
+
+与点积比较：
+
+$$
+\mathbf a\cdot\mathbf b=1(3)+2(4)=11
+$$
+
+$$
+\mathbf a\otimes\mathbf b=
+\begin{pmatrix}3&4\\6&8\end{pmatrix}
+$$
+
+点积发生求和，输出标量；张量积不对指标求和，输出二阶张量。
+
+##### 一个重要性质
+
+一般情况下：
+
+$$
+\boxed{\mathbf a\otimes\mathbf b\neq\mathbf b\otimes\mathbf a}
+$$
+
+例如：
+
+$$
+\mathbf b\otimes\mathbf a=
+\begin{pmatrix}3&6\\4&8\end{pmatrix}
+$$
+
+它恰好是前一个矩阵的转置：
+
+$$
+\boxed{
+(\mathbf a\otimes\mathbf b)^{\mathsf T}
+=
+\mathbf b\otimes\mathbf a
+}
+$$
+
+#### 2. 张量积如何作用于向量？
+
+这是把张量积和矩阵乘法连接起来的关键。
+
+对于：
+
+$$
+A=\mathbf a\otimes\mathbf b
+$$
+
+让它作用于向量 $\mathbf c$：
+
+$$
+A\mathbf c
+$$
+
+指标形式为：
+
+$$
+(A\mathbf c)_i=a_i b_jc_j
+$$
+
+其中：
+
+$$
+b_jc_j=\mathbf b\cdot\mathbf c
+$$
+
+所以：
+
+$$
+\boxed{
+(\mathbf a\otimes\mathbf b)\mathbf c
+=
+\mathbf a(\mathbf b\cdot\mathbf c)
+}
+$$
+
+这说明：
+
+并矢 $\mathbf a\otimes\mathbf b$ 可以视为一个秩至多为 1 的线性算子：先用 $\mathbf b$ 对输入向量做内积，再将结果乘以 $\mathbf a$。
+
+例如：
+
+$$
+\mathbf c=
+\begin{pmatrix}5\\6\end{pmatrix}
+$$
+
+则：
+
+$$
+\mathbf b\cdot\mathbf c=3(5)+4(6)=39
+$$
+
+因此：
+
+$$
+(\mathbf a\otimes\mathbf b)\mathbf c
+=
+39\begin{pmatrix}1\\2\end{pmatrix}
+=
+\boxed{\begin{pmatrix}39\\78\end{pmatrix}}
+$$
+
+直接进行矩阵乘法，也会得到同样结果。
+
+#### 3. 三个向量构造三阶张量
+
+设：
+
+$$
+T=\mathbf a\otimes\mathbf b\otimes\mathbf c
+$$
+
+则：
+
+$$
+\boxed{T_{ijk}=a_i b_j c_k}
+$$
+
+这里 $i,j,k$ 均为自由指标，所以没有求和。
+
+例如：
+
+$$
+\mathbf a=(1,2),\qquad
+\mathbf b=(3,4),\qquad
+\mathbf c=(5,6)
+$$
+
+那么三阶张量可以通过固定第三个指标显示成两个矩阵切片：
+
+$k=1$
+
+$$
+T_{ij1}=
+      \begin{pmatrix}
+      15&20\\30&40
+      \end{pmatrix}
+$$
+
+$k=2$
+
+$$
+T_{ij2}=
+      \begin{pmatrix}
+      18&24\\36&48
+      \end{pmatrix}
+$$
+
+三阶张量具有三个分量索引，不是说它一定具有三个空间维度。
+
+例如在二维空间中，三阶张量包含：
+
+$$
+2^3=8
+$$
+
+个分量位置。
+
+#### 4. 两个二阶张量的张量积
+
+设：
+
+$$
+A=A_{ij},\qquad B=B_{kl}
+$$
+
+它们的张量积为：
+
+$$
+\boxed{
+C=A\otimes B,\qquad C_{ijkl}=A_{ij}B_{kl}
+}
+$$
+
+因此：
+
+$$
+\boxed{2+2=4\text{ 阶}}
+$$
+
+具体取：
+
+$$
+A=
+\begin{pmatrix}
+1&2\\3&4
+\end{pmatrix},
+\quad
+B=
+\begin{pmatrix}
+5&6\\7&8
+\end{pmatrix}
+$$
+
+那么四阶张量的 $C_{11kl}$ 切片为：
+
+$$
+C_{11kl}=A_{11}B_{kl}
+$$
+
+即：
+
+$$
+\boxed{
+C_{11::}=
+\begin{pmatrix}5&6\\7&8\end{pmatrix}
+}
+$$
+
+而：
+
+$$
+C_{12kl}=A_{12}B_{kl}=2B_{kl}
+$$
+
+所以：
+
+$$
+\boxed{
+C_{12::}=
+\begin{pmatrix}10&12\\14&16\end{pmatrix}
+}
+$$
+
+其余两个切片为：
+
+$$
+C_{21::}=
+\begin{pmatrix}15&18\\21&24\end{pmatrix}
+$$
+
+$$
+C_{22::}=
+\begin{pmatrix}20&24\\28&32\end{pmatrix}
+$$
+
+四个 $2\times2$ 切片包含全部 16 个分量。
+
+##### 张量积的基本性质
+
+张量积满足：
+
+$$
+(A+B)\otimes C=A\otimes C+B\otimes C
+$$
+
+$$
+A\otimes(B+C)=A\otimes B+A\otimes C
+$$
+
+$$
+(\alpha A)\otimes B=\alpha(A\otimes B)
+$$
+
+并且具有自然的结合关系：
+
+$$
+(A\otimes B)\otimes C
+\cong A\otimes(B\otimes C)
+$$
+
+但一般不满足交换律：
+
+$$
+A\otimes B\neq B\otimes A
+$$
+
+### 四、指标缩并（Tensor Contraction）：如何降低张量阶数？
+
+张量积会增加阶数，而缩并恰好反过来。
+
+缩并的核心是选择一对可以配对的指标，对该指标求和。
+
+在一般张量分析中，严格的缩并需要一个上指标和一个下指标；对于全下标形式，需要先使用逆度量升指标。
+
+一次缩并将阶数降低 2：
+
+$$
+\boxed{k\longrightarrow k-2}
+$$
+
+#### 1. 二阶张量缩并为标量
+
+考虑：
+
+$$
+A^i_{\ j}
+$$
+
+将 $i,j$ 缩并：
+
+$$
+\boxed{A^i_{\ i}}
+$$
+
+三维展开：
+
+$$
+A^i_{\ i}
+=
+A^1_{\ 1}+A^2_{\ 2}+A^3_{\ 3}
+$$
+
+正是矩阵的迹：
+
+$$
+\boxed{\operatorname{tr}A=A^i_{\ i}}
+$$
+
+例如：
+
+$$
+A=
+\begin{pmatrix}
+2&3&0\\
+1&4&5\\
+0&2&6
+\end{pmatrix}
+$$
+
+则：
+
+$$
+\operatorname{tr}A=2+4+6=12
+$$
+
+它是一个标量。
+
+#### 2. 三阶张量缩并为向量
+
+设三阶混合张量：
+
+$$
+T^i_{\ jk}
+$$
+
+将第一、第二个指标缩并：
+
+$$
+\boxed{b_k=T^i_{\ ik}}
+$$
+
+这里 $i$ 求和，$k$ 保留。
+
+三维展开：
+
+$$
+b_k=T^1_{\ 1k}+T^2_{\ 2k}+T^3_{\ 3k}
+$$
+
+于是：
+
+$$
+b_1=T^1_{\ 11}+T^2_{\ 21}+T^3_{\ 31}
+$$
+
+$$
+b_2=T^1_{\ 12}+T^2_{\ 22}+T^3_{\ 32}
+$$
+
+$$
+b_3=T^1_{\ 13}+T^2_{\ 23}+T^3_{\ 33}
+$$
+
+最终结果是：
+
+$$
+\boxed{\mathbf b=(b_1,b_2,b_3)}
+$$
+
+为什么结果是一阶张量？
+
+因为原来有 $i,j,k$ 三个指标位置，缩并掉 $i,j$，只剩一个自由指标 $k$。
+
+#### 3. 四阶张量缩并为二阶张量
+
+考虑：
+
+$$
+C^{ij}_{\ \ kl}
+$$
+
+令第一个上指标和第一个下指标相同并求和：
+
+$$
+\boxed{B^j_{\ l}=C^{ij}_{\ \ il}}
+$$
+
+完整展开：
+
+$$
+B^j_{\ l}
+=
+C^{1j}_{\ \ 1l}
++
+C^{2j}_{\ \ 2l}
++
+C^{3j}_{\ \ 3l}
+$$
+
+结果仍有两个自由指标 $j,l$，所以是二阶张量。
+
+如果再进行一次缩并：
+
+$$
+\boxed{s=B^j_{\ j}=C^{ij}_{\ \ ij}}
+$$
+
+则得到标量。
+
+因此：
+
+$$
+\boxed{
+4\xrightarrow{\text{缩并一次}}2
+\xrightarrow{\text{再缩并一次}}0
+}
+$$
+
+#### 4. 两个二阶张量的单重缩并
+
+现在考虑两个二阶张量：
+
+$$
+A^i_{\ j},\qquad B^j_{\ k}
+$$
+
+将共有的 $j$ 指标缩并：
+
+$$
+\boxed{C^i_{\ k}=A^i_{\ j}B^j_{\ k}}
+$$
+
+这就是普通矩阵乘法：
+
+$$
+\boxed{C=AB}
+$$
+
+为什么？
+
+以二维的 $C_{12}$ 为例：
+
+$$
+C_{12}=A_{11}B_{12}+A_{12}B_{22}
+$$
+
+这正是矩阵第一行乘第二列。
+
+因此矩阵乘法可以理解为两个二阶张量通过一对指标缩并得到另一个二阶张量。
+
+这里默认相关分量已经用度量或对应类型进行正确配对。
+
+#### 5. 两个二阶张量的双重缩并
+
+定义 Frobenius 双点积：
+
+$$
+\boxed{
+A:B=\sum_{i,j}A_{ij}B_{ij}
+}
+$$
+
+在正交归一基底下：
+
+$$
+\boxed{
+A:B=\operatorname{tr}(A^{\mathsf T}B)
+}
+$$
+
+例如：
+
+$$
+A=
+\begin{pmatrix}
+1&2\\3&4
+\end{pmatrix},
+\qquad
+B=
+\begin{pmatrix}
+5&6\\7&8
+\end{pmatrix}
+$$
+
+于是：
+
+$$
+A:B=1(5)+2(6)+3(7)+4(8)
+$$
+
+即：
+
+$$
+\boxed{A:B=70}
+$$
+
+需要特别注意：
+
+$$
+AB=
+\begin{pmatrix}
+19&22\\43&50
+\end{pmatrix}
+$$
+
+而：
+
+$$
+A:B=70
+$$
+
+所以：
+
+$$
+\boxed{
+AB\neq A:B
+}
+$$
+
+前者得到二阶张量，后者得到标量。
+
+##### 双重缩并的三个重要性质
+
+对于二阶张量 $A,B,C$ 和标量 $\alpha$：
+
+$$
+A:B=B:A
+$$
+
+$$
+A:(B+C)=A:B+A:C
+$$
+
+$$
+(\alpha A):B=\alpha(A:B)
+$$
+
+并且：
+
+$$
+\boxed{A:A=\|A\|_F^2\geq0}
+$$
+
+其中 $\|A\|_F$ 是 Frobenius 范数：
+
+$$
+\|A\|_F=\sqrt{\sum_{i,j}A_{ij}^2}
+$$
+
+它是张量大小的一种度量。
+
+在流体力学中：
+
+$$
+D:D
+$$
+
+正是应变率张量的平方范数。
+
+### 五、张量的梯度、散度和 Laplace 算子
+
+前面的加法、张量积、缩并属于代数运算。
+
+现在进入微分运算，也是 PDE 中最重要的部分。
+
+要特别分清三个符号：
+
+$$
+\nabla f,\qquad \nabla\cdot\mathbf u,\qquad \nabla\cdot A
+$$
+
+虽然都使用 $\nabla$，结果的张量阶数却不同。
+
+#### 1. 标量的梯度：零阶变成一阶
+
+设：
+
+$$
+f=f(x,y,z)
+$$
+
+梯度定义为：
+
+$$
+\boxed{
+\nabla f=
+\begin{pmatrix}
+\frac{\partial f}{\partial x}\\[4pt]
+\frac{\partial f}{\partial y}\\[4pt]
+\frac{\partial f}{\partial z}
+\end{pmatrix}
+}
+$$
+
+例如：
+
+$$
+f(x,y,z)=x^2+2xy+z^2
+$$
+
+逐项求导：
+
+$$
+f_x=2x+2y,\qquad f_y=2x,\qquad f_z=2z
+$$
+
+所以：
+
+$$
+\boxed{
+\nabla f=
+\begin{pmatrix}
+2x+2y\\
+2x\\
+2z
+\end{pmatrix}
+}
+$$
+
+结果是向量。
+
+#### 2. 向量的梯度：一阶变成二阶
+
+设二维速度场：
+
+$$
+\mathbf u(x,y)=
+\begin{pmatrix}
+x^2+y\\
+xy
+\end{pmatrix}
+$$
+
+按照之前约定：
+
+$$
+L_{ij}=\partial_j u_i
+$$
+
+则：
+
+$$
+\nabla\mathbf u=
+\begin{pmatrix}
+\frac{\partial (x^2+y)}{\partial x}
+&
+\frac{\partial (x^2+y)}{\partial y}\\[6pt]
+\frac{\partial (xy)}{\partial x}
+&
+\frac{\partial (xy)}{\partial y}
+\end{pmatrix}
+$$
+
+计算后：
+
+$$
+\boxed{
+\nabla\mathbf u=
+\begin{pmatrix}
+2x&1\\
+y&x
+\end{pmatrix}
+}
+$$
+
+所以向量梯度是一组偏导数组成的二阶张量。
+
+特别注意，速度梯度不等于速度散度。
+
+速度散度是它的迹：
+
+$$
+\nabla\cdot\mathbf u
+=
+2x+x=3x
+$$
+
+结果是标量。
+
+#### 3. 二阶张量的梯度：二阶变成三阶
+
+设：
+
+$$
+A_{ij}=A_{ij}(x,y,z)
+$$
+
+定义它的梯度：
+
+$$
+\boxed{
+(\nabla A)_{ijk}=\partial_k A_{ij}
+}
+$$
+
+这里我们明确约定把新的导数指标放在最后。
+
+因此：
+
+$$
+A_{ij}\longrightarrow\partial_kA_{ij}
+$$
+
+原来有两个指标，求梯度之后有三个指标。
+
+也就是：
+
+$$
+\boxed{2\longrightarrow3}
+$$
+
+##### 计算实例
+
+考虑二维二阶张量场：
+
+$$
+A(x,y)=
+\begin{pmatrix}
+x^2&xy\\
+y^2&x+y
+\end{pmatrix}
+$$
+
+求张量梯度。
+
+先对 $x$ 求偏导：
+
+$$
+\frac{\partial A}{\partial x}
+=
+\begin{pmatrix}
+2x&y\\
+0&1
+\end{pmatrix}
+$$
+
+再对 $y$ 求偏导：
+
+$$
+\frac{\partial A}{\partial y}
+=
+\begin{pmatrix}
+0&x\\
+2y&1
+\end{pmatrix}
+$$
+
+所以三阶张量 $\nabla A$ 可以显示为两个矩阵切片：
+
+第三指标 $k=1$
+
+$$
+(\nabla A)_{ij1}=\begin{pmatrix}2x&y\\0&1\end{pmatrix}
+$$
+
+第三指标 $k=2$
+
+$$
+(\nabla A)_{ij2}=\begin{pmatrix}0&x\\2y&1\end{pmatrix}
+$$
+
+由此可以看到：二阶张量求梯度，相当于分别对每个空间坐标求导，再把结果组合成三阶张量。
+
+#### 4. 二阶张量的散度：二阶变成一阶
+
+对于：
+
+$$
+A=
+\begin{pmatrix}
+A_{11}&A_{12}\\
+A_{21}&A_{22}
+\end{pmatrix}
+$$
+
+在本文的约定下，散度定义为：
+
+$$
+\boxed{
+(\nabla\cdot A)_i=\partial_jA_{ij}
+}
+$$
+
+二维展开：
+
+$$
+\boxed{
+\nabla\cdot A=
+\begin{pmatrix}
+\partial_xA_{11}+\partial_yA_{12}\\
+\partial_xA_{21}+\partial_yA_{22}
+\end{pmatrix}
+}
+$$
+
+请注意，它是一个向量，而不是标量。
+
+##### 具体计算
+
+继续使用：
+
+$$
+A(x,y)=
+\begin{pmatrix}
+x^2&xy\\
+y^2&x+y
+\end{pmatrix}
+$$
+
+第一个分量：
+
+$$
+(\nabla\cdot A)_1
+=
+\frac{\partial x^2}{\partial x}
++
+\frac{\partial(xy)}{\partial y}
+$$
+
+所以：
+
+$$
+(\nabla\cdot A)_1=2x+x=3x
+$$
+
+第二个分量：
+
+$$
+(\nabla\cdot A)_2
+=
+\frac{\partial y^2}{\partial x}
++
+\frac{\partial(x+y)}{\partial y}
+$$
+
+于是：
+
+$$
+(\nabla\cdot A)_2=0+1=1
+$$
+
+最终：
+
+$$
+\boxed{
+\nabla\cdot A=
+\begin{pmatrix}
+3x\\1
+\end{pmatrix}
+}
+$$
+
+##### 张量散度与缩并的关系
+
+前面定义了：
+
+$$
+(\nabla A)_{ijk}=\partial_kA_{ij}
+$$
+
+这是三阶张量。
+
+现在对第二、第三个指标缩并：
+
+$$
+(\nabla A)_{ijj}=\partial_jA_{ij}
+$$
+
+恰好就是：
+
+$$
+\boxed{
+(\nabla\cdot A)_i=(\nabla A)_{ijj}
+}
+$$
+
+因此可以理解为：
+
+$$
+\boxed{
+\text{张量散度}
+=
+\text{先求梯度，再缩并一个指标对}
+}
+$$
+
+其阶数关系为：
+
+$$
+2\xrightarrow{\nabla}3
+\xrightarrow{\text{缩并}}1
+$$
+
+这是你理解张量微分运算最关键的一条关系。
+
+#### 5. 三阶张量的散度：三阶变成二阶
+
+假设三阶张量场：
+
+$$
+T_{ijk}=T_{ijk}(\mathbf x)
+$$
+
+约定对最后一个张量指标和导数指标缩并：
+
+$$
+\boxed{
+(\nabla\cdot T)_{ij}=\partial_kT_{ijk}
+}
+$$
+
+展开：
+
+$$
+(\nabla\cdot T)_{ij}
+=
+\frac{\partial T_{ij1}}{\partial x}
++
+\frac{\partial T_{ij2}}{\partial y}
++
+\frac{\partial T_{ij3}}{\partial z}
+$$
+
+结果还保留 $i,j$ 两个自由指标，因此是二阶张量。
+
+阶数变化为：
+
+$$
+\boxed{3\longrightarrow2}
+$$
+
+#### 6. 四阶张量的散度
+
+同理，四阶张量场：
+
+$$
+C_{ijkl}=C_{ijkl}(\mathbf x)
+$$
+
+定义：
+
+$$
+\boxed{
+(\nabla\cdot C)_{ijk}=\partial_lC_{ijkl}
+}
+$$
+
+所以：
+
+$$
+\boxed{4\longrightarrow3}
+$$
+
+其结果是三阶张量。
+
+还可以进一步取散度：
+
+$$
+\boxed{
+(\nabla\cdot\nabla\cdot C)_{ij}
+=
+\partial_k\partial_lC_{ijkl}
+}
+$$
+
+在此约定下，两次散度使四阶张量变成二阶张量。
+
+##### 微分算子的阶数规律
+
+| 输入 | 运算 | 输出 |
+| --- | --- | --- |
+| 标量 $f$ | $\nabla f$ | 向量 |
+| 向量 $\mathbf u$ | $\nabla\mathbf u$ | 二阶张量 |
+| 向量 $\mathbf u$ | $\nabla\cdot\mathbf u$ | 标量 |
+| 二阶 $A$ | $\nabla A$ | 三阶张量 |
+| 二阶 $A$ | $\nabla\cdot A$ | 向量 |
+| 三阶 $T$ | $\nabla\cdot T$ | 二阶张量 |
+| 四阶 $C$ | $\nabla\cdot C$ | 三阶张量 |
+
+这里的公式是笛卡尔坐标表示。在柱坐标、球坐标及一般曲线坐标中，必须正确处理基底的空间变化，通常需要协变导数。
+
+### 六、张量微分的重要乘积法则
+
+学习 PDE 时，仅仅知道怎样求导还不够，还要熟悉张量微分的乘积公式。
+
+#### 1. 标量与向量的散度乘积法则
+
+设 $f$ 为标量场，$\mathbf u$ 为向量场。
+
+有：
+
+$$
+\boxed{
+\nabla\cdot(f\mathbf u)
+=
+\nabla f\cdot\mathbf u+
+f\nabla\cdot\mathbf u
+}
+$$
+
+从指标形式推导：
+
+$$
+\partial_i(fu_i)
+=
+(\partial_i f)u_i+f(\partial_i u_i)
+$$
+
+前一项是：
+
+$$
+\nabla f\cdot\mathbf u
+$$
+
+后一项是：
+
+$$
+f\nabla\cdot\mathbf u
+$$
+
+所以公式成立。
+
+#### 2. 二阶张量与向量乘积的散度
+
+设 $A$ 是二阶张量场，$\mathbf v$ 是向量场。
+
+定义：
+
+$$
+(Av)_j=A_{jk}v_k
+$$
+
+那么：
+
+$$
+\nabla\cdot(Av)
+=
+\partial_j(A_{jk}v_k)
+$$
+
+使用乘积法则：
+
+$$
+=
+(\partial_jA_{jk})v_k+
+A_{jk}(\partial_jv_k)
+$$
+
+因此：
+
+$$
+\boxed{
+\nabla\cdot(A\mathbf v)
+=
+(\nabla\cdot A^{\mathsf T})\cdot\mathbf v+
+A:(\nabla\mathbf v)^{\mathsf T}
+}
+$$
+
+这里沿用本文 $(\nabla\mathbf v)_{kj}=\partial_jv_k$ 的约定。
+
+如果 $A=A^{\mathsf T}$，则简化为：
+
+$$
+\boxed{
+\nabla\cdot(A\mathbf v)
+=
+(\nabla\cdot A)\cdot\mathbf v+
+A:\nabla\mathbf v
+}
+$$
+
+因为对称矩阵与其转置具有相同的双点积。
+
+这个公式在流体力学的能量方程中非常重要。
+
+例如，对于对称柯西应力张量：
+
+$$
+\boxed{
+\nabla\cdot(\boldsymbol{\sigma}\mathbf u)
+=
+(\nabla\cdot\boldsymbol{\sigma})\cdot\mathbf u
++
+\boldsymbol{\sigma}:\nabla\mathbf u
+}
+$$
+
+其中：
+
+- 第一项与表面力所做的局部功率有关。
+- 第二项是应力与速度梯度的双重缩并。
+
+#### 3. 为什么 $\boldsymbol{\sigma}:\nabla\mathbf u=\boldsymbol{\sigma}:D$？
+
+因为：
+
+$$
+\nabla\mathbf u=D+W
+$$
+
+所以：
+
+$$
+\boldsymbol{\sigma}:\nabla\mathbf u
+=
+\boldsymbol{\sigma}:D+\boldsymbol{\sigma}:W
+$$
+
+对于经典无偶应力流体：
+
+$$
+\boldsymbol{\sigma}^{\mathsf T}=\boldsymbol{\sigma}
+$$
+
+而：
+
+$$
+W^{\mathsf T}=-W
+$$
+
+因此：
+
+$$
+\boldsymbol{\sigma}:W=0
+$$
+
+最终：
+
+$$
+\boxed{
+\boldsymbol{\sigma}:\nabla\mathbf u
+=
+\boldsymbol{\sigma}:D
+}
+$$
+
+也就是说，对称应力张量与速度梯度双重缩并时，反对称的局部旋转部分不产生贡献。
+
+这把你前面学过的速度梯度分解，与应力做功的计算联系了起来。
+
+### 七、四阶本构张量与二阶张量的双重缩并
+
+这是张量计算在连续介质力学中的典型应用，也是你需要重点掌握的内容。
+
+设：
+
+$$
+\mathcal C=C_{ijkl}
+$$
+
+是四阶张量。
+
+设：
+
+$$
+A=A_{kl}
+$$
+
+是二阶张量。
+
+定义：
+
+$$
+\boxed{
+B_{ij}=C_{ijkl}A_{kl}
+}
+$$
+
+也常写为：
+
+$$
+\boxed{B=\mathcal C:A}
+$$
+
+这里约定 $\mathcal C:A$ 对四阶张量的最后两个指标以及 $A$ 的两个指标进行双重缩并。
+
+#### 1. 为什么输出是二阶张量？
+
+考虑：
+
+$$
+C_{ijkl}A_{kl}
+$$
+
+其中：
+
+- $k,l$ 被重复使用并求和。
+- $i,j$ 没有求和，保留为自由指标。
+
+所以结果是：
+
+$$
+B_{ij}
+$$
+
+阶数计算：
+
+$$
+\boxed{4+2-2(2)=2}
+$$
+
+即两个缩并指标对消去了四个指标位置。
+
+#### 2. 使用二维例子，完整展开计算
+
+<TensorCalculations mode="constitutive" client:visible />
+
+在二维空间中，四阶张量有：
+
+$$
+2^4=16
+$$
+
+个分量。
+
+我们按前两个指标进行分块。假设：
+
+$$
+C_{11::}=
+\begin{pmatrix}
+1&2\\3&4
+\end{pmatrix}
+$$
+
+$$
+C_{12::}=
+\begin{pmatrix}
+5&6\\7&8
+\end{pmatrix}
+$$
+
+$$
+C_{21::}=
+\begin{pmatrix}
+9&10\\11&12
+\end{pmatrix}
+$$
+
+$$
+C_{22::}=
+\begin{pmatrix}
+13&14\\15&16
+\end{pmatrix}
+$$
+
+另外给定二阶张量：
+
+$$
+A=
+\begin{pmatrix}
+1&2\\3&4
+\end{pmatrix}
+$$
+
+现在计算：
+
+$$
+B_{ij}=C_{ijkl}A_{kl}
+$$
+
+首先计算 $B_{11}$。
+
+$$
+B_{11}
+=
+C_{1111}A_{11}
++C_{1112}A_{12}
++C_{1121}A_{21}
++C_{1122}A_{22}
+$$
+
+代入：
+
+$$
+B_{11}=1(1)+2(2)+3(3)+4(4)
+$$
+
+所以：
+
+$$
+\boxed{B_{11}=30}
+$$
+
+再计算：
+
+$$
+B_{12}
+=
+5(1)+6(2)+7(3)+8(4)
+$$
+
+得到：
+
+$$
+\boxed{B_{12}=70}
+$$
+
+同理：
+
+$$
+B_{21}
+=
+9(1)+10(2)+11(3)+12(4)=110
+$$
+
+$$
+B_{22}
+=
+13(1)+14(2)+15(3)+16(4)=150
+$$
+
+最终：
+
+$$
+\boxed{
+B=
+\begin{pmatrix}
+30&70\\
+110&150
+\end{pmatrix}
+}
+$$
+
+这就是一次完整的四阶张量与二阶张量双重缩并计算。
+
+请注意：这个例子是一个普通四阶张量的代数计算。由于这里没有要求 $C_{ijkl}$ 满足材料本构对称性，因此结果矩阵不一定对称。
+
+#### 3. 将四阶张量转换成普通矩阵计算
+
+为了进行数值计算，可以把指标对 $(i,j)$ 和 $(k,l)$ 分别合并成一个索引。
+
+例如二维采用顺序：
+
+$$
+(11),(12),(21),(22)
+$$
+
+就可以将四阶张量排列成一个 $4\times4$ 矩阵：
+
+$$
+[C]_{\mathrm{flat}}=
+\begin{pmatrix}
+1&2&3&4\\
+5&6&7&8\\
+9&10&11&12\\
+13&14&15&16
+\end{pmatrix}
+$$
+
+将二阶张量展平：
+
+$$
+[A]_{\mathrm{flat}}=
+\begin{pmatrix}
+1\\2\\3\\4
+\end{pmatrix}
+$$
+
+那么双重缩并就变成：
+
+$$
+[B]_{\mathrm{flat}}
+=
+[C]_{\mathrm{flat}}[A]_{\mathrm{flat}}
+$$
+
+于是：
+
+$$
+\boxed{
+[B]_{\mathrm{flat}}=
+\begin{pmatrix}
+30\\70\\110\\150
+\end{pmatrix}
+}
+$$
+
+再恢复成 $2\times2$ 矩阵，即得到刚才的结果。
+
+这说明：
+
+四阶张量作用于二阶张量，本质上可以表示为一个高维矩阵作用于一个展平向量。
+
+但这一表示依赖于指标排列约定。尤其当应力、应变对称而采用 Voigt 记法时，还需要注意剪切分量是否使用工程剪切应变，以及对应的系数因子。
+
+### 八、四阶单位张量与对称投影张量
+
+四阶张量中有两类对象特别常见，后面推导流体黏性与固体弹性时都会用到。
+
+#### 1. 四阶恒等算子
+
+定义：
+
+$$
+\boxed{
+\mathcal I_{ijkl}=\delta_{ik}\delta_{jl}
+}
+$$
+
+让它作用于任意二阶张量 $A$：
+
+$$
+(\mathcal I:A)_{ij}
+=
+\delta_{ik}\delta_{jl}A_{kl}
+$$
+
+先对 $k$ 求和：
+
+$$
+\delta_{ik}A_{kl}=A_{il}
+$$
+
+再对 $l$ 求和：
+
+$$
+\delta_{jl}A_{il}=A_{ij}
+$$
+
+因此：
+
+$$
+\boxed{
+\mathcal I:A=A
+}
+$$
+
+这就是四阶恒等算子的定义性质。
+
+注意四阶恒等张量与普通二阶单位矩阵 $I$ 不同：它作用在二阶张量空间上。
+
+#### 2. 四阶对称投影算子
+
+定义：
+
+$$
+\boxed{
+\mathcal I^{\mathrm{sym}}_{ijkl}
+=
+\frac12
+(\delta_{ik}\delta_{jl}+\delta_{il}\delta_{jk})
+}
+$$
+
+作用于二阶张量：
+
+$$
+(\mathcal I^{\mathrm{sym}}:A)_{ij}
+=
+\frac12(\delta_{ik}\delta_{jl}+\delta_{il}\delta_{jk})A_{kl}
+$$
+
+展开：
+
+$$
+=
+\frac12
+\left(
+\delta_{ik}\delta_{jl}A_{kl}
++
+\delta_{il}\delta_{jk}A_{kl}
+\right)
+$$
+
+第一项：
+
+$$
+\delta_{ik}\delta_{jl}A_{kl}=A_{ij}
+$$
+
+第二项：
+
+$$
+\delta_{il}\delta_{jk}A_{kl}=A_{ji}
+$$
+
+所以：
+
+$$
+\boxed{
+(\mathcal I^{\mathrm{sym}}:A)_{ij}
+=
+\frac12(A_{ij}+A_{ji})
+}
+$$
+
+即：
+
+$$
+\boxed{
+\mathcal I^{\mathrm{sym}}:A=\operatorname{sym}A
+}
+$$
+
+这意味着四阶对称投影张量可以把一个任意二阶张量变为它的对称部分。
+
+例如：
+
+$$
+A=
+\begin{pmatrix}
+1&2\\4&3
+\end{pmatrix}
+$$
+
+则：
+
+$$
+\mathcal I^{\mathrm{sym}}:A
+=
+\frac12
+\left[
+\begin{pmatrix}1&2\\4&3\end{pmatrix}
++
+\begin{pmatrix}1&4\\2&3\end{pmatrix}
+\right]
+$$
+
+得到：
+
+$$
+\boxed{
+\mathcal I^{\mathrm{sym}}:A=
+\begin{pmatrix}
+1&3\\3&3
+\end{pmatrix}
+}
+$$
+
+这就是用四阶张量实现二阶矩阵的对称化。
+
+### 九、四阶本构张量在牛顿流体中的完整推导
+
+现在把前面的四阶张量计算应用到流体力学。
+
+#### 1. 从牛顿流体的黏性应力开始
+
+对于不可压缩、各向同性牛顿流体：
+
+$$
+\boxed{
+\tau_{ij}=2\mu D_{ij}
+}
+$$
+
+其中：
+
+$$
+D_{ij}
+=
+\frac12
+\left(
+\partial_j u_i+\partial_i u_j
+\right)
+$$
+
+我们希望把这个公式写成四阶张量形式：
+
+$$
+\boxed{
+\tau_{ij}=C_{ijkl}D_{kl}
+}
+$$
+
+定义：
+
+$$
+\boxed{
+C_{ijkl}
+=
+\mu(\delta_{ik}\delta_{jl}+\delta_{il}\delta_{jk})
+}
+$$
+
+将它代入：
+
+$$
+\tau_{ij}
+=
+\mu(\delta_{ik}\delta_{jl}+\delta_{il}\delta_{jk})D_{kl}
+$$
+
+拆成两项：
+
+$$
+\tau_{ij}
+=
+\mu\delta_{ik}\delta_{jl}D_{kl}
++
+\mu\delta_{il}\delta_{jk}D_{kl}
+$$
+
+由克罗内克符号的筛选性质：
+
+$$
+\delta_{ik}\delta_{jl}D_{kl}=D_{ij}
+$$
+
+$$
+\delta_{il}\delta_{jk}D_{kl}=D_{ji}
+$$
+
+因此：
+
+$$
+\tau_{ij}=\mu(D_{ij}+D_{ji})
+$$
+
+由于应变率张量是对称的：
+
+$$
+D_{ij}=D_{ji}
+$$
+
+所以：
+
+$$
+\boxed{\tau_{ij}=2\mu D_{ij}}
+$$
+
+这就完成了四阶本构张量形式的推导。
+
+#### 2. 做一个具体数值计算
+
+设二维应变率张量为：
+
+$$
+D=
+\begin{pmatrix}
+2&1\\
+1&-2
+\end{pmatrix}\ \mathrm{s^{-1}}
+$$
+
+动力黏度为：
+
+$$
+\mu=3\ \mathrm{Pa\cdot s}
+$$
+
+首先计算：
+
+$$
+\tau=2\mu D
+$$
+
+代入：
+
+$$
+\tau=6
+\begin{pmatrix}
+2&1\\
+1&-2
+\end{pmatrix}
+$$
+
+得到：
+
+$$
+\boxed{
+\tau=
+\begin{pmatrix}
+12&6\\
+6&-12
+\end{pmatrix}\ \mathrm{Pa}
+}
+$$
+
+这就是黏性应力张量。
+
+现在从四阶张量角度检查一个分量。
+
+例如：
+
+$$
+\tau_{12}
+=
+C_{12kl}D_{kl}
+$$
+
+展开：
+
+$$
+\tau_{12}
+=
+\mu(\delta_{1k}\delta_{2l}+\delta_{1l}\delta_{2k})D_{kl}
+$$
+
+第一部分筛选出 $D_{12}$，第二部分筛选出 $D_{21}$。
+
+因此：
+
+$$
+\tau_{12}
+=
+3(D_{12}+D_{21})
+$$
+
+代入：
+
+$$
+\tau_{12}=3(1+1)
+$$
+
+得到：
+
+$$
+\boxed{\tau_{12}=6\ \mathrm{Pa}}
+$$
+
+与矩阵计算一致。
+
+#### 3. 一般可压缩牛顿流体的四阶本构张量
+
+如果考虑可压缩性，则：
+
+$$
+\tau_{ij}
+=
+2\mu D_{ij}
++\lambda(\nabla\cdot\mathbf u)\delta_{ij}
+$$
+
+由于：
+
+$$
+\nabla\cdot\mathbf u=D_{kk}
+$$
+
+可以写成：
+
+$$
+\tau_{ij}
+=
+2\mu D_{ij}
++
+\lambda D_{kk}\delta_{ij}
+$$
+
+定义：
+
+$$
+\boxed{
+C_{ijkl}
+=
+\lambda\delta_{ij}\delta_{kl}
++
+\mu(\delta_{ik}\delta_{jl}+\delta_{il}\delta_{jk})
+}
+$$
+
+则：
+
+$$
+\boxed{
+\tau_{ij}=C_{ijkl}D_{kl}
+}
+$$
+
+因为：
+
+$$
+\delta_{kl}D_{kl}=\operatorname{tr}(D)
+$$
+
+所以第一项：
+
+$$
+\lambda\delta_{ij}\delta_{kl}D_{kl}
+=
+\lambda\delta_{ij}\operatorname{tr}(D)
+$$
+
+而第二项：
+
+$$
+\mu(\delta_{ik}\delta_{jl}+\delta_{il}\delta_{jk})D_{kl}
+=
+2\mu D_{ij}
+$$
+
+最终：
+
+$$
+\boxed{
+\boldsymbol{\tau}
+=
+2\mu D+\lambda\operatorname{tr}(D)I
+}
+$$
+
+这里的 $\lambda$ 是第二黏性系数，与前面求特征值时使用的符号虽然相同，但含义不同。
+
+在三维流体本构中，体积黏度为 $\zeta=\lambda+2\mu/3$，因此 $\lambda$ 本身不应直接称为体积黏度。不可压缩流的 $\operatorname{tr}D=0$，这一各向同性项消失。
+
+### 十、四阶本构张量还有哪些重要性质？
+
+以经典线性弹性材料的四阶刚度张量为例：
+
+$$
+\sigma_{ij}=C_{ijkl}\varepsilon_{kl}
+$$
+
+在通常的线弹性理论中，它往往具有以下对称性质。
+
+#### 1. 小对称性（Minor Symmetry）
+
+$$
+\boxed{
+C_{ijkl}=C_{jikl}
+}
+$$
+
+以及：
+
+$$
+\boxed{
+C_{ijkl}=C_{ijlk}
+}
+$$
+
+第一种与应力对称有关，第二种与应变对称有关；严格来说，第二种也可通过选择对称输入空间的表示来实现。
+
+#### 2. 大对称性（Major Symmetry）
+
+如果材料存在足够光滑的应变能密度函数，并且刚度张量是其关于应变的二阶导数，则有：
+
+$$
+\boxed{
+C_{ijkl}=C_{klij}
+}
+$$
+
+这种对称性不是任意四阶张量都必须满足的。
+
+在三维中，一般四阶张量有：
+
+$$
+81
+$$
+
+个分量位置。
+
+如果具备上述小对称性，并且输入、输出均限制在对称二阶张量空间，可用一个 $6\times6$ 矩阵表示：
+
+$$
+36
+$$
+
+个位置。
+
+如果进一步具备大对称性，该 $6\times6$ 矩阵为对称矩阵，独立分量最多为：
+
+$$
+\frac{6(6+1)}2=21
+$$
+
+所以：
+
+$$
+\boxed{
+81\longrightarrow36\longrightarrow21
+}
+$$
+
+各向同性线弹性材料还可以进一步由两个独立的 Lamé 参数描述。
+
+这是张量对称性能够显著简化物理模型和数值计算的典型例子。
+
+### 十一、用代码进行张量计算：NumPy 与 JAX
+
+当你开始实际求解 PDE 或训练与流场相关的机器学习模型时，通常不会手动计算四阶张量的所有 81 个分量。
+
+可以使用 NumPy 或 JAX 中的 `einsum`，直接按照爱因斯坦求和记法计算。
+
+例如：
+
+```python
+import numpy as np
+
+a = np.array([1.0, 2.0])
+b = np.array([3.0, 4.0])
+A = np.array([[1.0, 2.0], [3.0, 4.0]])
+B = np.array([[5.0, 6.0], [7.0, 8.0]])
+
+print("张量积:", np.einsum("i,j->ij", a, b))
+print("迹:", np.einsum("ii->", A))
+print("A:B =", np.einsum("ij,ij->", A, B))
+
+mu = 3.0  # Pa·s
+I = np.eye(2)
+C = mu * (
+    np.einsum("ik,jl->ijkl", I, I)
+    + np.einsum("il,jk->ijkl", I, I)
+)
+D = np.array([[2.0, 1.0], [1.0, -2.0]])  # s^-1
+tau = np.einsum("ijkl,kl->ij", C, D)
+print("黏性应力 (Pa):", tau)
+assert np.allclose(tau, 2 * mu * D)
+
+sigma = np.array([[10.0, 2.0], [2.0, 6.0]])
+theta = np.pi / 4
+Q = np.array([
+    [np.cos(theta), -np.sin(theta)],
+    [np.sin(theta), np.cos(theta)],
+])
+n = np.array([1.0, 1.0]) / np.sqrt(2)
+sigma_prime = Q.T @ sigma @ Q
+n_prime = Q.T @ n
+##### 换基底前后计算的是同一个牵引力向量。
+assert np.allclose(sigma_prime @ n_prime, Q.T @ (sigma @ n))
+print("旋转后的应力 (Pa):", sigma_prime)
+```
+
+这里最值得理解的是 `einsum` 字符串中的指标规则。
+
+| NumPy 表达式 | 数学公式 | 运算 |
+| --- | --- | --- |
+| `i,j->ij` | $a_i b_j$ | 两个向量张量积 |
+| `ij,j->i` | $A_{ij}b_j$ | 矩阵乘向量 |
+| `ij,jk->ik` | $A_{ij}B_{jk}$ | 矩阵乘法 |
+| `ii->` | $A_{ii}$ | 求迹 |
+| `ij,ij->` | $A_{ij}B_{ij}$ | 双重缩并 |
+| `ijkl,kl->ij` | $C_{ijkl}D_{kl}$ | 四阶与二阶双重缩并 |
+
+这些表达式几乎可以原样移植到 JAX 的 `jnp.einsum` 中。
+
+### 十二、张量计算必须掌握的完整公式表
+
+| 运算 | 数学表达式 | 阶数变化 |
+| --- | --- | --- |
+| 张量加法 | $C_{ij}=A_{ij}+B_{ij}$ | $2\to2$ |
+| 转置 | $A^{\mathsf T}_{ij}=A_{ji}$ | $2\to2$ |
+| 向量张量积 | $T_{ij}=a_i b_j$ | $1+1\to2$ |
+| 二阶张量积 | $C_{ijkl}=A_{ij}B_{kl}$ | $2+2\to4$ |
+| 迹 | $A^i_{\ i}$ | $2\to0$ |
+| 矩阵乘向量 | $b_i=A_{ij}v_j$ | $2+1\to1$ |
+| 二阶矩阵乘法 | $C_{ik}=A_{ij}B_{jk}$ | $2+2\to2$ |
+| 双点积 | $A:B=A_{ij}B_{ij}$ | $2+2\to0$ |
+| 二阶张量梯度 | $(\nabla A)_{ijk}=\partial_k A_{ij}$ | $2\to3$ |
+| 二阶张量散度 | $(\nabla\cdot A)_i=\partial_jA_{ij}$ | $2\to1$ |
+| 三阶张量散度 | $(\nabla\cdot T)_{ij}=\partial_kT_{ijk}$ | $3\to2$ |
+| 四阶本构缩并 | $B_{ij}=C_{ijkl}A_{kl}$ | $4+2\to2$ |
+| 对称化 | $D=\frac12(A+A^{\mathsf T})$ | $2\to2$ |
+
+这张表默认使用笛卡尔正交基底的工程分量记法；在一般坐标中需根据张量类型正确升降指标并使用协变导数。
+
+#### 最后：如何判断一个复杂张量公式是否正确？
+
+当你看到一个复杂的张量表达式时，建议按以下四步检查。
+
+**第 1 步**
+确定每个张量的阶数与指标类型。
+
+例如 $C_{ijkl}$ 是四阶，而 $D_{kl}$ 是二阶；在一般基底下还要明确哪个指标是协变、哪个是逆变。
+
+**第 2 步**
+圈出求和指标。
+
+如 $C_{ijkl}D_{kl}$，求和指标是 $k,l$，保留的自由指标是 $i,j$。
+
+**第 3 步**
+检查结果的阶数。
+
+两个自由指标意味着结果是二阶张量；一个自由指标意味着结果是向量；没有自由指标意味着结果是标量。
+
+**第 4 步**
+检查坐标变换、物理量纲和对称性。
+
+例如应力 $\boldsymbol{\sigma}$ 的单位是 Pa，应力散度 $\nabla\cdot\boldsymbol{\sigma}$ 的单位是 $\mathrm{N/m^3}$。若量纲不一致，公式就可能有问题。
+
+对于 PDE 和 CFD，你最应该建立的核心联系是：
+
+$$
+\boxed{
+\begin{aligned}
+\nabla\mathbf u&=L &&\text{速度梯度}\\
+D&=\frac12(L+L^{\mathsf T}) &&\text{应变率}\\
+\boldsymbol{\tau}&=\mathcal C:D &&\text{本构关系}\\
+\mathbf f_{\mathrm{visc}}&=\nabla\cdot\boldsymbol{\tau} &&\text{黏性力密度}
+\end{aligned}
+}
+$$
+
+这四步把一阶速度场、二阶应变率张量、四阶本构张量、二阶应力张量和一阶力密度向量连接起来，构成了连续介质力学中非常重要的一条数学主线。
+
+### 十三、补充问答：张量计算、并矢和缩并有哪些可直接使用的性质？
+
+> **补充问题**：张量怎样计算？张量积、缩并与“合并”各有哪些性质，怎样避免把运算混在一起？
+
+**回答**
+
+这里把“合并”区分成两种含义：若指并矢或张量积，就写成 $\otimes$；若指程序中把多个轴合成一条轴，就是展平或重排。后者只改变存储布局，没有完成求和缩并。以下算例均使用实数、笛卡尔正交归一基底；一般基底中的规范缩并配对一个上指标与一个下指标，同类型指标的配对需要度量。
+
+#### 1. 加法、数乘、转置和矩阵乘法
+
+同型、同一基底下的张量可以逐分量相加，满足交换律、结合律；数乘满足分配律。矩阵表示中的复合运算 $AB$ 满足结合律和分配律，但一般不满足交换律。
+
+$$
+(AB)_{ik}=\sum_j A_{ij}B_{jk},\qquad
+(AB)^{\mathsf T}=B^{\mathsf T}A^{\mathsf T}.
+$$
+
+取下面两个二阶张量的矩阵表示：
+
+$$
+A=\begin{bmatrix}1&2\\3&4\end{bmatrix},\qquad
+B=\begin{bmatrix}0&1\\2&0\end{bmatrix}.
+$$
+
+$$
+AB=\begin{bmatrix}4&1\\8&3\end{bmatrix},\qquad
+BA=\begin{bmatrix}3&4\\2&4\end{bmatrix}.
+$$
+
+例如 $(AB)_{21}=3\times0+4\times2=8$；先施加 $B$ 再施加 $A$，与反过来的结果不同。这也是不能随意交换张量公式中因子位置的原因。
+
+#### 2. 并矢（张量积）：双线性、结合，但一般不交换
+
+向量并矢定义为 $(a\otimes b)_{ij}=a_i b_j$，它是二阶张量。对于任意适配的张量，张量积具有双线性：
+
+$$
+(\alpha A+\beta B)\otimes C
+=\alpha(A\otimes C)+\beta(B\otimes C),
+$$
+
+$$
+A\otimes(\alpha B+\beta C)
+=\alpha(A\otimes B)+\beta(A\otimes C).
+$$
+
+在自然对应下，$(A\otimes B)\otimes C=A\otimes(B\otimes C)$；但 $A\otimes B$ 与 $B\otimes A$ 的指标槽顺序不同，通常不能直接相等。对两个向量则有：
+
+$$
+(a\otimes b)^{\mathsf T}=b\otimes a,\qquad
+(a\otimes b)v=a(b\cdot v).
+$$
+
+取 $a=(1,2)^{\mathsf T}$、$b=(3,4)^{\mathsf T}$、$v=(2,-1)^{\mathsf T}$：
+
+$$
+a\otimes b=\begin{bmatrix}3&4\\6&8\end{bmatrix},\qquad
+b\otimes a=\begin{bmatrix}3&6\\4&8\end{bmatrix}.
+$$
+
+$$
+(a\otimes b)v
+=\begin{bmatrix}3\times2+4\times(-1)\\6\times2+8\times(-1)\end{bmatrix}
+=\begin{bmatrix}2\\4\end{bmatrix}
+=a\,[3\times2+4\times(-1)].
+$$
+
+并矢把 $v$ 沿 $b$ 的分量提取出来，再沿 $a$ 的方向输出。它不等于点积 $a\cdot b=11$，也不等于叉积。
+
+#### 3. 缩并的线性、阶数与求和指标改名
+
+固定一对指标槽的缩并是线性运算，记作 $\operatorname{ctr}$：
+
+$$
+\operatorname{ctr}(\alpha T+\beta U)
+=\alpha\operatorname{ctr}(T)+\beta\operatorname{ctr}(U).
+$$
+
+每缩并一对指标就少两个自由指标。$p$ 阶与 $q$ 阶张量先做张量积，再缩并 $r$ 对指标，结果的阶数是 $p+q-2r$。这里 $r$ 指配对数，不能把“求和项的数量”当成缩并次数。
+
+哑指标可以整体改名：$A_{ij}b_j=A_{ik}b_k$。自由指标则必须在等式每一项保持一致。工程爱因斯坦记法中，一个求和指标在同一项恰好出现两次；$A_{ij}b_jc_j$ 不能直接套用该规则，应改写成有明确求和号的表达式并说明含义。
+
+不同且互不重叠的配对，在有限维中可以交换求和顺序：
+
+$$
+\sum_i\sum_k C_{iikk}=\sum_k\sum_i C_{iikk}.
+$$
+
+但**交换求和顺序不等于交换配对方式**。$C_{iikk}$ 与 $C_{ikik}$ 通常不同。例如令 $C_{ijkl}=A_{ij}B_{kl}$，取 $A=\operatorname{diag}(1,2)$、$B=\operatorname{diag}(3,4)$，则：
+
+$$
+\sum_{i,k}C_{iikk}=(\operatorname{tr}A)(\operatorname{tr}B)=3\times7=21,
+\qquad
+\sum_{i,k}C_{ikik}=A:B=1\times3+2\times4=11.
+$$
+
+#### 4. 双重缩并、迹与内积：冒号不能省略约定
+
+本文对于实二阶张量采用 Frobenius 内积：
+
+$$
+A:B=\sum_{i,j}A_{ij}B_{ij}
+=\operatorname{tr}(A^{\mathsf T}B).
+$$
+
+因此 $A:B=B:A$，$A:A\geq0$，且 $A:A=0$ 当且仅当 $A=0$。由它定义的范数为 $\|A\|_F=\sqrt{A:A}$，满足 $|A:B|\leq\|A\|_F\|B\|_F$。注意 $\operatorname{tr}(AB)=A:B^{\mathsf T}$，一般不等于 $A:B$。
+
+继续用本节第 1 小节的 $A,B$：
+
+$$
+A:B=1\times0+2\times1+3\times2+4\times0=8,
+\qquad
+\operatorname{tr}(AB)=4+3=7.
+$$
+
+若 $S^{\mathsf T}=S$、$W^{\mathsf T}=-W$，则 $S:W=0$：对角项为零，两个非对角配对项相互抵消。因此对 $L=D+W$，有：
+
+$$
+L:L=D:D+W:W,\qquad D:W=0.
+$$
+
+若经典牛顿流体 $\tau=2\mu D+\lambda\operatorname{tr}(D)I$，黏性应力功率密度为：
+
+$$
+\tau:L=\tau:D=2\mu D:D+\lambda[\operatorname{tr}(D)]^2.
+$$
+
+三维中令 $D'=D-\tfrac13\operatorname{tr}(D)I$、$\zeta=\lambda+\tfrac23\mu$，可进一步写成 $2\mu D':D'+\zeta[\operatorname{tr}(D)]^2$。在 $\mu\geq0$、$\zeta\geq0$ 下非负；不可压缩时只剩 $2\mu D:D$。单位是 $\mathrm{Pa/s}=\mathrm{W/m^3}$，它把缩并运算直接联系到流体的黏性耗散。
+
+#### 5. 四阶张量：哪些缩并公式可以快速计算？
+
+定义 $(A\otimes B)_{ijkl}=A_{ij}B_{kl}$，而 $(\mathcal C:D)_{ij}=\sum_{kl}C_{ijkl}D_{kl}$。于是：
+
+$$
+(A\otimes B):D=A(B:D).
+$$
+
+这里先算标量 $B:D$，再数乘 $A$。不能把它当成 $ABD$，也不能把四个指标的排列随意交换。四阶算子的复合写成：
+
+$$
+(\mathcal C\circ\mathcal H)_{ijmn}
+=\sum_{kl}C_{ijkl}H_{klmn},\qquad
+(\mathcal C\circ\mathcal H):D=\mathcal C:(\mathcal H:D).
+$$
+
+这体现算子复合的结合律，通常没有交换律。若 $C_{ijkl}=C_{klij}$（大对称），则它关于双重缩并自伴随：$A:(\mathcal C:B)=B:(\mathcal C:A)$。大对称与 $C_{ijkl}=C_{jikl}=C_{ijlk}$（小对称）是不同性质，不能混用。
+
+#### 6. “合并指标”与缩并为什么不是一回事？
+
+对于三维四阶张量，可以把 $(i,j)$ 合成行编号 $I=3(i-1)+j$，把 $(k,l)$ 合成列编号 $J=3(k-1)+l$，得到一个 $9\times9$ 矩阵 $\widehat C_{IJ}$。同样把 $D$ 排成 9 分量向量，就可以用矩阵乘法计算 $\widehat\tau=\widehat C\widehat D$。
+
+**把 81 个分量排成 $9\times9$ 并没有缩并**，分量没有减少；矩阵乘法中的求和才完成 $k,l$ 两个指标的缩并。若利用对称性压成 Voigt 的 6 分量，还必须声明剪切分量采用 $D_{12}$ 还是 $2D_{12}$；若要保持普通点积对应张量内积，则可使用带 $\sqrt2$ 剪切权重的 Mandel 表示。
+
+一个二维例子最容易看到这个系数。对称矩阵 $D=\begin{bmatrix}2&1\\1&-2\end{bmatrix}$：
+
+$$
+D:D=2^2+1^2+1^2+(-2)^2=10.
+$$
+
+只存 $(D_{11},D_{22},D_{12})=(2,-2,1)$ 后，普通平方和为 9，漏掉了一个剪切贡献；带权内积 $D_{11}^2+D_{22}^2+2D_{12}^2$ 才是 10。Mandel 向量 $(2,-2,\sqrt2)$ 的普通平方和也是 10。
+
+#### 7. 最后用一张表检查运算
+
+| 运算 | 是否求和 | 结果 | 常见错误 |
+| --- | --- | --- | --- |
+| $a\otimes b$ | 否 | 二阶张量 | 当成向量点积 |
+| $A\otimes B$ | 否 | 四阶张量 | 当成矩阵乘法 |
+| $Ab$ | 对一个指标求和 | 向量 | 交换指标方向 |
+| $AB$ | 对一对指标缩并 | 二阶张量 | 假定 $AB=BA$ |
+| $A:B$ | 对两对指标缩并 | 标量 | 当成 $\operatorname{tr}(AB)$ |
+| $\mathcal C:D$ | 对两对指标缩并 | 二阶张量 | 忘记两个剪切分量分别贡献 |
+| 四阶数组展平成矩阵 | 否 | 相同分量的另一种排列 | 误以为已经降阶缩并 |
+
+## 参考与继续阅读
+
+以上内容来自个人学习对话，按问题保留完整推导。可对照以下材料核查约定并继续学习：
+
+- [物质导数笔记](/posts/fluid-mechanics/material-derivative/)
+- [不可压缩 N–S 方程推导](/posts/navier-stokes/derivation/)
+- [MIT Marine Hydrodynamics 第 4 讲](https://web.mit.edu/fluids-modules/www/potential_flows/LecturesHTML/lec04/lecture4.html)：对照牛顿流体本构与动量方程的假设。
+- [NumPy einsum 官方文档](https://numpy.org/doc/stable/reference/generated/numpy.einsum.html)：核对指标运算的代码写法。
