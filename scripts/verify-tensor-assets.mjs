@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { resolve } from "node:path";
+import { fromHtml } from "hast-util-from-html";
+import katex from "katex";
+import { visit } from "unist-util-visit";
 
 const root = resolve(import.meta.dirname, "..");
 const html = readFileSync(
@@ -14,6 +18,70 @@ const source = readFileSync(
 assert.equal((source.match(/^## 问题 \d：/gm) ?? []).length, 7);
 assert.equal((source.match(/我的问题（原文）/g) ?? []).length, 7);
 assert.ok(!html.includes("katex-error"), "Rendered formula error found");
+// rehype-katex imports its own KaTeX; passing { katex } does not override it.
+// Mismatched CSS can collapse boxed formulas even when parsing succeeds.
+const require = createRequire(import.meta.url);
+const rendererRequire = createRequire(require.resolve("rehype-katex"));
+const renderer = rendererRequire("katex");
+assert.equal(
+	katex.version,
+	renderer.version,
+	"KaTeX stylesheet package and rehype renderer must use the same version",
+);
+const mathCss = readFileSync(require.resolve("katex/dist/katex.css"), "utf8");
+const fixture = renderer.renderToString(String.raw`\boxed{3^3=27}`);
+const baseClass = fixture.includes('class="katex-base"')
+	? "katex-base"
+	: "base";
+const stretchyClass = fixture.includes("katex-stretchy")
+	? "katex-stretchy"
+	: "stretchy";
+assert.ok(mathCss.includes(`.katex .${baseClass}`));
+assert.ok(mathCss.includes(`.katex .${stretchyClass}`));
+assert.ok(
+	html.includes(`class="${baseClass}"`),
+	"Built math uses stale markup",
+);
+const tree = fromHtml(html);
+let bundledCss = "";
+visit(tree, "element", (node) => {
+	if (node.tagName !== "link" || !node.properties.rel?.includes("stylesheet"))
+		return;
+	const url = node.properties.href;
+	if (typeof url === "string" && url.startsWith("/_astro/")) {
+		bundledCss += readFileSync(resolve(root, `dist${url}`), "utf8");
+	}
+});
+assert.ok(
+	bundledCss.includes(`.katex .${baseClass}`),
+	"Built CSS does not match formula base class",
+);
+assert.ok(
+	bundledCss.includes(`.katex .${stretchyClass}`),
+	"Built CSS does not match formula box class",
+);
+let formulaCount = 0;
+let boxedCount = 0;
+visit(tree, "element", (node) => {
+	if (
+		node.tagName !== "annotation" ||
+		node.properties.encoding !== "application/x-tex"
+	)
+		return;
+	const latex = node.children
+		.map((child) => (child.type === "text" ? child.value : ""))
+		.join("");
+	assert.doesNotThrow(
+		() => renderer.renderToString(latex, { throwOnError: true, strict: false }),
+		`Invalid formula: ${latex}`,
+	);
+	formulaCount++;
+	if (latex.includes("\\boxed")) boxedCount++;
+});
+assert.ok(formulaCount > 1000, "Expected the complete article's formulas");
+console.log(
+	`Math audit passed: ${formulaCount} formulas (${boxedCount} boxed), renderer and stylesheet both KaTeX ${katex.version}.`,
+);
 assert.ok(
 	!/(?:localhost|127\.0\.0\.1|sandbox:|file:\/\/|C:\\Users|D:\\swap)/.test(
 		html,

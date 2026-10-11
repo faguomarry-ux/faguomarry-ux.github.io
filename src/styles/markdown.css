@@ -122,6 +122,13 @@
     }
   }
 
+  /* KaTeX emits .katex-display directly, without a container wrapper. */
+  .katex-display {
+    max-width: 100%;
+    overflow: auto hidden;
+    padding-block: 0.2em;
+  }
+
   .katex-display-container {
     max-width: 100%;
     overflow-x: auto;

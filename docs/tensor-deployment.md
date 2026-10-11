@@ -24,6 +24,10 @@
 
 ## 发布前检查
 
+KaTeX 渲染器与样式必须使用相同版本。当前直接依赖精确固定为 `0.16.47`，与 `rehype-katex@7` 的实际依赖一致。`rehype-katex` 内部导入自己的 KaTeX，传入 `{ katex }` 不会替换渲染器。此前 0.16 的公式 HTML 配上 0.19 的 CSS，使 `\boxed` 外框塌缩成竖线，并影响其他公式布局。升级时必须同步核对依赖与构建后的 CSS 类名，不能只检查公式是否解析成功。参见 [KaTeX 版本一致性说明](https://katex.org/docs/issues)。
+
+长公式现在直接在 `.katex-display` 上启用横向滚动；KaTeX 默认不会生成 `.katex-display-container` 包装，只有后者的样式无法处理溢出。窄屏下保留数学结构，使用横向滚动阅读。
+
 ```sh
 pnpm check
 pnpm type-check
@@ -32,7 +36,7 @@ node scripts/verify-tensor-assets.mjs
 pnpm preview
 ```
 
-资源检查脚本会核对七组原始问题、八张 SVG 是否完整复制到 `dist`、客户端脚本是否存在、公式是否出现渲染错误，以及是否误用 localhost、sandbox 或本机文件路径。它检查构建产物，不能代替 GitHub Actions 成功记录或线上实际访问。
+资源检查脚本会核对七组原始问题、八张 SVG 和参考 PNG 是否完整复制到 `dist`、客户端脚本是否存在、图片署名授权、全部公式能否解析、KaTeX 渲染器与样式的版本及构建后的类名是否匹配，以及是否误用 localhost、sandbox 或本机文件路径。GitHub Pages 工作流在构建后运行此脚本，检查失败不会部署。它检查构建产物，不能代替线上实际访问。
 
 浏览器验证覆盖：基底角度和主应力方向、截面法向与切向应力、微团播放及暂停、二至四阶切片切换、并矢与双重缩并逐项计算、黏度改变时的本构结果，以及窄屏显示。新增或更改组件后，应重新检查正文内的实际组件。
 

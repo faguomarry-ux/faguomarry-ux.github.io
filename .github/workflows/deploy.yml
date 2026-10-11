@@ -43,6 +43,9 @@ jobs:
       - name: Build site
         run: pnpm run build
 
+      - name: Verify tensor formulas and assets
+        run: node scripts/verify-tensor-assets.mjs
+
       - name: Create .nojekyll file
         run: touch dist/.nojekyll
       
